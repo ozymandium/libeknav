@@ -185,35 +185,3 @@ basic_ins_qkf::obs_vector(const Vector3d& ref, const Vector3d& obs, double error
 #endif
 
 }
-
-void
-basic_ins_qkf::decompose_sigma_points(
-		std::vector<basic_ins_qkf::vector_obs_state, aligned_allocator<basic_ins_qkf::vector_obs_state> >& points,
-		Matrix<double, 15, 30>& errors,
-		double error)
-{
-	LLT<Matrix<double, 15, 15> > cov_sqrt(
-			(Matrix<double, 15, 15>() << cov, Matrix<double, 12, 3>::Zero(),
-				Matrix<double, 3, 12>::Zero(), Matrix3d::Identity()*error).finished());
-	points.clear();
-	points.reserve(30);
-
-	for (int i = 0; i < 15; ++i) {
-		errors.col(i*2) = cov_sqrt.matrixL().col(i);
-		errors.col(i*2+1) = -cov_sqrt.matrixL().col(i);
-		points.push_back(vector_obs_state(avg_state, cov_sqrt.matrixL().col(i)));
-		points.push_back(vector_obs_state(avg_state, -cov_sqrt.matrixL().col(i)));
-	}
-}
-
-
-Quaterniond
-basic_ins_qkf::observe_vector(const vector_obs_state& point, const Vector3d& ref_vector)
-{
-	// return point.orientation;
-	// Returns only the portion of the orientation that could be observed at
-	// this orientation.  Effectively, this "factors out" a minimal rotation about
-	// the expected observation of the reference vector.
-	Vector3d expected_obs = (point.meas_error + point.orientation * ref_vector).normalized();
-	return Quaterniond().setFromTwoVectors(ref_vector, expected_obs);
-}

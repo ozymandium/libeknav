@@ -159,15 +159,6 @@ basic_ins_qkf::state::print(std::ostream& str)
 		<< " velocity: " << velocity.transpose();
 }
 
-void
-basic_ins_qkf::process_state::print(std::ostream& str)
-{
-	state::print(str);
-	return;
-//	str << " gyro_instability: " << gyro_instability.transpose()
-//		<< " gyro_meas: " << gyro_meas.transpose()
-//		<< " accel_meas: " << accel_meas.transpose();
-}
 
 double
 basic_ins_qkf::angular_error(const Quaterniond& q) const

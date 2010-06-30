@@ -31,32 +31,6 @@ using Eigen::Quaterniond;
 using Eigen::Matrix;
 using Eigen::aligned_allocator;
 
-/// A satellite vehicle raw observation
-struct sv_obs
-{
-	typedef std::vector<sv_obs, aligned_allocator<sv_obs> > container_t;
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-	/// The position of the satellite, in ECEF coords, in meters
-	Vector3d position;
-	/// The velocity of the satellite, in ECEF coords, in meters/second
-	Vector3d velocity;
-	/** The doppler-determined relative magnitude of velocity between the antenna
-	 * and the satellite, in meters/second
-	 */
-	double dv;
-	/// The RMS error of the satellite dopper, in (m/s)^2
-	double dv_error;
-	/// The distance to the satellite, in meters
-	double range;
-	/// The RMS error of the satellite range, in meters^2
-	double range_error;
-};
-
-struct sv_error
-{
-	double dv_error;
-	double range_error;
-};
 
 struct basic_ins_qkf
 {
@@ -251,7 +225,7 @@ struct basic_ins_qkf
 	/**
 	 * Directly observe the gyro sensor bias. In practice, we cannot do this. However,
 	 * the true bias is not a random walk. It tends to return towards zero when it is
-	 * farther away from zero (not temperature dependant). Therefore, we can
+	 * farther away from zero (not temperature dependent). Therefore, we can
 	 * incorporate this extra knowledge through a periodic "observation" of zero 
 	 * bias with a large error.
 	 *
@@ -263,22 +237,21 @@ struct basic_ins_qkf
 	 */
 	void obs_gyro_bias(const Vector3d& bias, const Vector3d& bias_error);
 
-	/**
-	 * Incorporate a "raw" satellite observation.  The observation should be
-	 * fully filtered for ionospheric, atmospheric, and other error models.
-	 *
-	 * @param sv_pos list of satellite positions, in ECEF
-	 * @param sv_vel list of satellite velocities, in ECEF
-	 * @param sv_range list of satellite distances, in meters
-	 * @param sv_range_error list of satellite distance error 1-sigma^2 bounds,
-	 * 	in meters^2
-	 * @param sv_dv list of relative velocities, in meters/second
-	 * @param sv_dv_error list of relative velocity error 1-sigma^2 bounds,
-	 *  in (m/s)^2
-	 */
-	void obs_gps_sv(const sv_obs::container_t& sv_pos);
 
+	/**
+	 * Measure the total angular error between the filter's attitude estimate
+	 * and some other orientation.
+	 * @param orientation The attitude to compare against
+	 * @return The angular difference between them, in radians
+	 */
 	double angular_error(const Quaterniond& orientation) const;
+
+	/**
+	 * Measure the total gyro bias error between the filter's estimate and
+	 * some other bias
+	 * @param gyro_bias The gyro bias vector to compare against
+	 * @return The vector difference between them, in radians/second
+	 */
 	double gyro_bias_error(const Vector3d& gyro_bias) const;
 
 	/**
@@ -288,142 +261,14 @@ struct basic_ins_qkf
 	double mahalanobis_distance(const state& sample) const;
 
 private:
-	struct process_state : state
-	{
-		typedef std::vector<process_state, aligned_allocator<process_state> > container_t;
-		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		/**
-		 * Construct a process augmented state from mean and error terms
-		 * @param mean The t-1 mean.
-		 * @param error An error vector of length 21 or greater
-		 * @param gyro_mean The observed gyro measurement
-		 * @param accel_mean The observed accellerometer measurement
-		 */
-		template <typename Matrix_T>
-		process_state(const state& mean, const Matrix_T& error, const Vector3d& gyro_mean, const Vector3d& accel_mean)
-			: state(mean, error)
-			, gyro_instability(error.template segment<3>(12))
-			, gyro_meas(gyro_mean + error.template segment<3>(15))
-			, accel_meas(accel_mean + error.template segment<3>(18))
-		{
-		}
-
-		/**
-		 * Construct a process augmented state vector from mean and error terms,
-		 * but do not include any error terms for the augmented state.
-		 * @param mean The t-1 mean
-		 * @param error An error vector of length 12 or greater
-		 * @param gyro_mean The observed gyro measurement
-		 * @param accel_mean The observed accellerometer measurement
-		 * @param (anon) A dummy parameter used to disambiguate the signature of this function from the
-		 * primary constructor
-		 */
-		template <typename Matrix_T>
-		process_state(const state& mean, const Matrix_T& error, const Vector3d& gyro_mean, const Vector3d& accel_mean, bool)
-			: state(mean, error)
-			, gyro_instability(Vector3d::Zero())
-			, gyro_meas(gyro_mean)
-			, accel_meas(accel_mean)
-		{
-		}
-
-		/**
-		 * Construct a process augmented state vector that is nearly a copy of
-		 * the average state, without any error terms.
-		 * @param mean The t-1 mean
-		 * @param gyro_mean The observed gyro measurement
-		 * @param accel_mean The observed accelerometer measurement
-		 * @return
-		 */
-		process_state(const state& mean, const Vector3d& gyro_mean, const Vector3d& accel_mean)
-			: state(mean)
-			, gyro_instability(Vector3d::Zero())
-			, gyro_meas(gyro_mean)
-			, accel_meas(accel_mean)
-		{
-		}
-
-		/// The amount by which the gyro null point has drifted in this time step.
-		Vector3d gyro_instability;
-		/// The measurement of the angular rate gyro's, in rad/sec
-		Vector3d gyro_meas;
-		/// The measurement of the accelerometer, in m/sec/sec
-		Vector3d accel_meas;
-		void print(std::ostream& str);
-	};
 
 	/**
 	 * The type of an error term between two state vectors.
 	 */
 	typedef Eigen::Matrix<double, 12, 1> state_error_t;
-
-	/** Produce a set of 24 equally-weighted sigma points from avg_state and cov
-	 * and load them into @paramref points.
-	 */
-	void decompose_sigma_points(process_state::container_t& points, const Vector3d& gyro_meas, const Vector3d& accel_meas, double dt);
-	/** Project one sigma point through the non-linear process equation.
-	 * TODO: Should this be a member function of process_state?
-	 */
-	state project_sigma_point(const process_state& p, double dt);
-	/// Compute the median value of a set of sigma points.
-	state average_sigma_points(const state::container_t& points);
 	/// Compute the error difference between a sigma point and the mean as: point - mean
 	state_error_t sigma_point_difference(const state& mean, const state& point) const;
 
-	/**
-	 * Augmented state vector that incorporates linear sensor noise from the
-	 * vector observer.
-	 */
-	struct vector_obs_state : state
-	{
-		typedef std::vector<vector_obs_state, aligned_allocator<vector_obs_state> > container_t;
-		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		/**
-		 * Construct an augmented state for making a vector observation
-		 * @param mean The a priori mean
-		 * @param error An error vector of length 15 or greater
-		 */
-		template <typename Matrix_T>
-		vector_obs_state(const state& mean, const Matrix_T& error)
-			: state(mean, error)
-			, meas_error(error.template segment<3>(12))
-		{
-		}
-		/// The measurement error, in the units of the observer.
-		Vector3d meas_error;
-	};
-	/**
-	 * Produce a set of sigma points and their error vectors when performing a
-	 * 	vector observation.
-	 * @param points A container to receive the set of sigma points
-	 * @param errors A matrix to receive the set of error vectors (deviation
-	 * 	from the sigma points)
-	 * @param error The sigma-squared uncertainty in the vector observation,
-	 * 	in the units of the sensor.
-	 */
-	void decompose_sigma_points(vector_obs_state::container_t& points, Matrix<double, 15, 30>& errors, double error);
-	/// Compute the minimal quaternion that rotates ref into its expected position
-	Quaterniond observe_vector(const vector_obs_state& point, const Vector3d& ref_vector);
-
-	struct gps_raw_state : state
-	{
-		typedef std::vector<gps_raw_state, aligned_allocator<gps_raw_state> > container_t;
-		template<typename VectorT>
-		gps_raw_state(const state& mean, const VectorT& error);
-
-		sv_error obs_errors[max_sv];
-	};
-
-	struct gps_estimated_obs
-	{
-		double range[max_sv];
-		double dv[max_sv];
-	};
-
-	void decompose_sigma_points(gps_raw_state::container_t& points, const sv_obs::container_t& sv_pos);
-	gps_estimated_obs observe_sv(const gps_raw_state& point, const sv_obs::container_t& sv_pos);
-	gps_estimated_obs average_sigma_points(const std::vector<gps_estimated_obs>& points, int n_sv);
-	Matrix<double, Eigen::Dynamic, 1> sigma_point_difference(const gps_estimated_obs& median, const gps_estimated_obs& point, int n_sv);
 
 public:
 	/** Perform the posterior counter-rotation of the covariance matrix by
@@ -437,22 +282,5 @@ public:
 	 */
 	bool is_real(void) const;
 };
-
-template<typename VectorT>
-basic_ins_qkf::gps_raw_state::gps_raw_state(const state& mean, const VectorT& error)
-	: state(mean, error)
-{
-	const unsigned base = 12;
-	const unsigned stride = 2;
-	for (unsigned sv = 0; sv < max_sv && sv*stride + base < (unsigned)error.rows(); ++sv) {
-		obs_errors[sv].dv_error = error(base + sv*stride);
-		obs_errors[sv].range_error = error(base + sv*stride + 1);
-	}
-	// Clear remaining error terms with something loud
-	for (unsigned sv = (error.rows() - 12)/2; sv != max_sv; ++sv) {
-		obs_errors[sv].dv_error = NAN;
-		obs_errors[sv].range_error = NAN;
-	}
-}
 
 #endif
