@@ -80,6 +80,7 @@ quaternion_avg_johnson(const std::vector<Quaternion<FloatT> >& points)
 	return ret;
 }
 
+
 // Compute the quaternion average using the Markley SVD method
 template <typename FloatT>
 Quaternion<FloatT>
@@ -89,8 +90,8 @@ quaternion_avg_markley(const std::vector<Quaternion<FloatT> >& points)
 	// double scale = 1.0 / points.size();
 	Matrix<FloatT, 3, 3> sum;
 	sum.setZero();
-	for (auto i = points.begin(), end = points.end(); i != end; ++i) {
-		sum += i->toRotationMatrix();
+	for (int i = 0, end = points.size(); i != end; ++i) {
+		sum += points[i].toRotationMatrix();
 	}
 
 	SVD<Matrix<FloatT, 3, 3> > svd(sum);
