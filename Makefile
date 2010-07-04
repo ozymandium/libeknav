@@ -1,7 +1,7 @@
 
 CPPFLAGS = -I./
-CXXFLAGS = -pipe -fPIC -O3 -fshow-column -ffast-math -DEIGEN_DONT_VECTORIZE \
-	-DEIGEN_DONT_ALIGN -DNDEBUG 
+CXXFLAGS = -pipe -O3 -fshow-column -ffast-math -DEIGEN_DONT_VECTORIZE -fPIC \
+	-DEIGEN_DONT_ALIGN -DNDEBUG -g -ffunction-sections -fdata-sections -DTIME_OPS
 CXXFLAGS += -Wall -Wextra
 LDFLAGS = -pg -g -L. -Wl,--no-undefined
 LIBS = -lboost_thread
@@ -20,10 +20,10 @@ LIBS = -lboost_thread
 #assumed to be on Linux
 EXEEXT = 
 CXX = g++-4.4 -std=gnu++0x
-CC = gcc
+CC = gcc-4.4
 LD = $(CC)
 LDXX = $(CXX)
-CPPFLAGS += -I./posix -I/home/jonathan/src/eigen
+CPPFLAGS += -I./posix -I/home/jonathan/src/eigen -I/home/jonathan/src/boost_1_43_0
 TARGETDIR = posix
 #endif
 
@@ -46,6 +46,7 @@ INS_QKF_OBJS = ins_qkf_observe_gps_pvt.o \
 	ins_qkf_observe_gps_p.o \
 	ins_qkf_observe_vector.o \
 	ins_qkf_predict.o \
+	diagnostics.o \
 	basic_ins_qkf.o
 
 INS_QKF_NED_OBJS = ins_qkf_observe_gps_p.o \
@@ -73,7 +74,13 @@ libeknav-ned.so: $(INS_QKF_NED_OBJS)
 libeknav-ecef.so: $(INS_QKF_ECEF_OBJS)
 	$(LDXX) -shared -O3 -o $@ $^ $(LDFLAGS)
 
-test_ins_qkf$(EXEXT): test_ins_qkf.o $(PLATFORM_OBJS) libeknav-ecef.so
-	$(LDXX) -o $@ $< $(PLATFORM_OBJS) $(LDFLAGS) $(LIBS) -L. -leknav-ecef
+libeknav-ecef.a: $(INS_QKF_ECEF_OBJS)
+	$(AR) cru $@ $^
+
+libeknav-ned.a: $(INS_QKF_NED_OBJS)
+	$(AR) cru $@ $^
+
+test_ins_qkf$(EXEXT): test_ins_qkf.o diagnostics.o $(PLATFORM_OBJS) libeknav-ecef.so
+	$(LDXX) -o $@ $< diagnostics.o $(PLATFORM_OBJS) $(LDFLAGS) $(LIBS) -L. -leknav-ecef
 
 -include *.d win32/*.d posix/*.d

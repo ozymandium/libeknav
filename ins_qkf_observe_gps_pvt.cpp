@@ -24,6 +24,10 @@
 #include <Eigen/LU>
 #include "timer.hpp"
 
+#ifdef TIME_OPS
+#include <iostream>
+#endif
+
 using namespace Eigen;
 
 #define RANK_ONE_UPDATES

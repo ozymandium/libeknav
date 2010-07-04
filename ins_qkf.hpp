@@ -136,7 +136,7 @@ struct basic_ins_qkf
 		 * Print a representation of this object to the stream str.
 		 * @param str An output stream.
 		 */
-		virtual void print(std::ostream& str);
+		void print(std::ostream& str);
 	};
 
 	/// The average state of the filter at any time t.

@@ -18,6 +18,10 @@
 #include "assertions.hpp"
 #include "timer.hpp"
 
+#ifdef TIME_OPS
+#include <iostream>
+#endif
+
 using namespace Eigen;
 
 void

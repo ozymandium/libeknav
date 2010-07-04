@@ -22,10 +22,14 @@
 
 #include "ins_qkf.hpp"
 #include "assertions.hpp"
-#include <Eigen/LU>
 #include "timer.hpp"
 
 #define RANK_ONE_UPDATES
+
+#ifndef RANK_ONE_UPDATES
+#include <Eigen/LU>
+#endif
+
 using namespace Eigen;
 
 void

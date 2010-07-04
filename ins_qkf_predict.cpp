@@ -23,23 +23,13 @@
 #include "assertions.hpp"
 #include "timer.hpp"
 
+#ifdef TIME_OPS
+# include <iostream>
+#endif
+
 using namespace Eigen;
 
 namespace {
-
-void
-dump_state_errors(Matrix<double, 12, Dynamic> state_errors)
-{
-	// Dump only a few of the state error vectors
-	Matrix<double, 6, 6> dump;
-	dump << state_errors.col(0).start<6>()
-		, state_errors.col(2).start<6>()
-		, state_errors.col(4).start<6>()
-		, state_errors.col(6).start<6>()
-		, state_errors.col(8).start<6>()
-		, state_errors.col(10).start<6>();
-	std::cout << "state errors:\n" << dump << "\n";
-}
 
 Matrix<double, 3, 3>
 axis_scale(const Vector3d& axis, double scale)
@@ -149,8 +139,7 @@ linear_predict(basic_ins_qkf& _this, const Vector3d& gyro_meas, const Vector3d& 
 	_this.avg_state.orientation = orientation;
 }
 
-}
-
+} // !namespace (anon)
 
 void
 basic_ins_qkf::predict(const Vector3d& gyro_meas, const Vector3d& accel_meas, double dt)
@@ -159,184 +148,13 @@ basic_ins_qkf::predict(const Vector3d& gyro_meas, const Vector3d& accel_meas, do
 	timer clock;
 	clock.start();
 #endif
-#if 1
+
 	// Always use linearized prediction
 	linear_predict(*this, gyro_meas, accel_meas, dt);
-#elif 0
-	// Use linearized prediction only after UKF methods
-	if (cov.block<3, 3>(3, 3).diagonal().maxCoeff() < 0.25*M_PI*M_PI) {
-		// The following provides a ~5x speedup in the filter as a whole.
-		linear_predict(*this, gyro_meas, accel_meas, dt);
-#ifdef TIME_OPS
-		double time = clock.stop()*1e6;
-		std::cout << "linear predict time: " << time << "\n";
-#endif
-		return;
-	}
-#else
 
-	process_state::container_t points;
-	decompose_sigma_points(points, gyro_meas, accel_meas, dt);
-	state::container_t projected_points;
-	projected_points.reserve(points.size());
-	for (auto i = points.begin(), end = points.end(); i != end; ++i) {
-		projected_points.push_back(project_sigma_point(*i, dt));
-	}
-	state mean = average_sigma_points(projected_points);
-#if 0
-	// Test to ensure that what is computed by the arithmetic mean matches
-	// what is computed by projecting the true mean forward through the state
-	// equations.
-	std::cout << "t-1 mean: "; avg_state.print(std::cout);
-	std::cout << "\na priori mean: "; mean.print(std::cout);
-	std::cout << "\nexpected angular change: " << gyro_meas.norm()*dt;
-	std::cout << "\nabs angular change: " << avg_state.orientation.angularDistance(mean.orientation);
-	std::cout << "\nexpected vec angular change: " << gyro_meas.transpose() * dt;
-	std::cout << "\nalt angular change: " << (avg_state.orientation.conjugate()*-(gyro_meas*dt)).transpose();
-	std::cout << "\nvec angular change: " << log<double>((mean.orientation.conjugate()*avg_state.orientation).normalized()).transpose() << "\n";
-
-//	state alt_mean = project_sigma_point(process_state(avg_state, gyro_meas, accel_meas), dt);
-//	std::cout << "\nprojected sigma point mean: "; alt_mean.print(std::cout); std::cout << "\n";
-#endif
-	Matrix<double, 12, 42> state_errors;
-	for (int i = 0, end = points.size(); i != end; ++i) {
-		state_errors.col(i) = sigma_point_difference(mean, projected_points[i]);
-	}
-	assert(!hasNaN(state_errors));
-
-	// dump_state_errors(state_errors);
-	cov = (state_errors * state_errors.transpose()) * 0.5;
-	// std::cout << "cov: " << cov << std::endl;
-	avg_state = mean;
-	assert(is_real());
-#endif
 #ifdef TIME_OPS
 	double time = clock.stop()*1e6;
 	std::cout << "unscented predict time: " << time << "\n";
 #endif
 }
 
-#if 0
-void
-basic_ins_qkf::decompose_sigma_points(
-		basic_ins_qkf::process_state::container_t& points,
-		const Vector3d& gyro_meas,
-		const Vector3d& accel_meas,
-		double)
-{
-	// Perform the decomposition in double-precision due to the deliberately poor
-	// conditioning on the matrix.
-	// TODO: Factor the covariance into D*cov, where D is a diagonal
-	// scaling matrix that improves the conditioning of cov.  Then
-	// multiply the result by sqrt(D).  This way the decomposition can be
-	// stably performed using single-precision math.
-	// cov <- 1/D*cov
-	// LLT <- sqrt(D)*LLT(cov)
-
-	// WARNING: none of the sigma points are multiplied by their weights. The
-	// assumption is that the nonlinear propagation function follows
-	// the relation:
-	// lambda*x_1 = f(lambda*x_0)
-	// for arbitrary scalars lambda.
-	points.clear();
-	points.reserve(42);
-#if 0
-	Matrix<double, 21, 21> aug_cov;
-	aug_cov << cov,
-		Matrix<double, 12, 9>::Zero(),
-		Matrix<double, 3, 12>::Zero(), gyro_stability_noise.asDiagonal(), Matrix<double, 3, 6>::Zero(),
-		Matrix<double, 3, 15>::Zero(), gyro_white_noise.asDiagonal(), Matrix<double, 3, 3>::Zero(),
-		Matrix<double, 3, 18>::Zero(), accel_white_noise.asDiagonal();
-	LLT<Matrix<double, 21, 21> > cov_sqrt(aug_cov);
-
-	// std::cout << "Augmented covariance: " << aug_cov << std::endl;
-	// std::cout << "LLT: " << cov_sqrt.matrixL() << std::endl;
-	assert(!hasNaN(cov_sqrt.matrixL()));
-	assert(!hasInf(cov_sqrt.matrixL()));
-	for (int i = 0; i < 21; ++i) {
-		points.push_back(process_state(avg_state, Matrix<double, 21, 1>(
-				cov_sqrt.matrixL().col(i)), gyro_meas, accel_meas));
-		// points.back().print(std::cout); std::cout << "\n";
-		points.push_back(process_state(avg_state, Matrix<double, 21, 1>(
-				-cov_sqrt.matrixL().col(i)), gyro_meas, accel_meas));
-		// points.back().print(std::cout); std::cout << std::endl;
-	}
-#else
-	// An optimization.  Since the lower 9 rows of the augmented covariance
-	// matrix are zero (except for the diagonal elemnts towards the right)
-	// only perform the LLT over the upper-left block.  This saves many
-	// multiplications by zero.
-	LLT<Matrix<double, 12, 12> > cov_sqrt(cov);
-	assert(!hasNaN(cov_sqrt.matrixL()));
-	assert(!hasInf(cov_sqrt.matrixL()));
-
-	for (int i = 0; i < 12; ++i) {
-		points.push_back(process_state(avg_state, Matrix<double, 12, 1>(
-				cov_sqrt.matrixL().col(i)), gyro_meas, accel_meas, false));
-		// points.back().print(std::cout); std::cout << "\n";
-		points.push_back(process_state(avg_state, Matrix<double, 12, 1>(
-				-cov_sqrt.matrixL().col(i)), gyro_meas, accel_meas, false));
-		// points.back().print(std::cout); std::cout << std::endl;
-	}
-
-	for (int i = 0; i < 3; ++i) {
-		double v = std::sqrt(gyro_stability_noise[i]);
-		points.push_back(process_state(avg_state, gyro_meas, accel_meas));
-		points.back().gyro_instability[i] = v;
-		points.push_back(process_state(avg_state, gyro_meas, accel_meas));
-		points.back().gyro_instability[i] = -v;
-	}
-
-	for (int i = 0; i < 3; ++i) {
-		double v = std::sqrt(gyro_white_noise[i]);
-		points.push_back(process_state(avg_state, gyro_meas, accel_meas));
-		points.back().gyro_meas[i] += v;
-		points.push_back(process_state(avg_state, gyro_meas, accel_meas));
-		points.back().gyro_meas[i] += -v;
-	}
-
-	for (int i = 0; i < 3; ++i) {
-		double v = std::sqrt(accel_white_noise[i]);
-		points.push_back(process_state(avg_state, gyro_meas, accel_meas));
-		points.back().accel_meas[i] += v;
-		points.push_back(process_state(avg_state, gyro_meas, accel_meas));
-		points.back().accel_meas[i] += -v;
-	}
-#endif
-}
-
-
-basic_ins_qkf::state
-basic_ins_qkf::project_sigma_point(
-	const basic_ins_qkf::process_state& p,
-	double dt)
-{
-	// Optimization opportunity:
-	// TODO: Much of the cost (~45%) in this algorithm is associated with taking the
-	// exponential of the model rate.  However, only 6 of the 42 sigma points
-	// have a model rate that is affected by the gyro bias.
-	state ret;
-	ret.gyro_bias = p.gyro_bias + p.gyro_instability * dt;
-	
-	Vector3d model_rate = (p.gyro_meas - p.gyro_bias)*dt;
-#if 0
-	Vector3d rev_model_rate = log<double>(exp<double>(model_rate));
-	if (!model_rate.isApprox(rev_model_rate)) {
-		std::cout << "Warning: " << model_rate.transpose()
-				<< " round-trips to " << rev_model_rate.transpose() << "\n";
-	}
-#endif
-
-	Quaterniond step(exp<double>(model_rate));
-	ret.orientation = (step * p.orientation);
-
-	// TODO: Refine the accelleration due to gravity by the ECEF distance, or some other model
-	Vector3d accel = p.orientation.conjugate() * p.accel_meas -
-			p.position.normalized() * 9.81;
-	ret.velocity = (p.velocity + accel * dt);
-	ret.position = p.position + p.velocity*dt + (0.5 * accel*dt*dt);
-	assert(ret.is_real());
-	return ret;
-}
-
-#endif
