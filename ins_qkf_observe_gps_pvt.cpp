@@ -36,19 +36,18 @@ void
 basic_ins_qkf::obs_gps_v_report(const Vector3d& vel, const Vector3d& v_error)
 {
 	Vector3d residual = vel - avg_state.velocity;
-	Matrix<double, 3, 3> innovation_cov = cov.block<3, 3>(9, 9);
-	innovation_cov += v_error.asDiagonal();
 
-#if 0
-	// WARNING: Running rank-one updates in velocity tends to destabilize
-	// the filter during initialization.
+#ifdef RANK_ONE_UPDATES
 	Matrix<double, 12, 1> update = Matrix<double, 12, 1>::Zero();
 	for (int i = 0; i < 3; ++i) {
-		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 9+i) / innovation_cov(i, i);
+		double innovation_cov_inv = 1.0/(cov(9+i, 9+i) + v_error[i]);
+		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 9+i) * innovation_cov_inv;
 		update += gain * (residual[i] - update[9+i]);
 		cov -= gain * cov.block<1, 12>(9+i, 0);
 	}
 #else
+	Matrix<double, 3, 3> innovation_cov = cov.block<3, 3>(9, 9);
+	innovation_cov += v_error.asDiagonal();
 	Matrix<double, 3, 12> kalman_gain_t;
 	innovation_cov.qr().solve(cov.block<3, 12>(9, 0), &kalman_gain_t);
 	cov.part<Eigen::SelfAdjoint>() -= cov.block<12, 3>(0, 9) * kalman_gain_t; // .transpose() * cov.block<3, 12>(9, 0);
