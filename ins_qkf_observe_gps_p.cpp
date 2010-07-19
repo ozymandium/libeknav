@@ -43,7 +43,7 @@ basic_ins_qkf::obs_gps_p_report(const Vector3d& pos, const Vector3d& p_error)
 		double innovation_cov_inv = 1.0/(cov(6+i, 6+i) + p_error[i]);
 		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 6+i) * innovation_cov_inv;
 		update += gain * (residual[i] - update[6+i]);
-		cov -= gain * cov.block<1, 12>(6+i, 0);
+		cov.part<Eigen::SelfAdjoint>() -= gain * cov.block<1, 12>(6+i, 0);
 	}
 
 #else
