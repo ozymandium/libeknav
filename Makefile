@@ -1,8 +1,8 @@
 
-CPPFLAGS = -I./
-CXXFLAGS = -pipe -O3 -fshow-column -ffast-math -DEIGEN_DONT_VECTORIZE -fPIC \
-	-DEIGEN_DONT_ALIGN -DNDEBUG -g -ffunction-sections -fdata-sections -DTIME_OPS
-CXXFLAGS += -Wall -Wextra
+CPPFLAGS = -I./ -DEIGEN_DONT_ALIGN -DEIGEN_DONT_VECTORIZE 
+OPTIMIZE = -O3 -ffast-math -g -ffunction-sections -fdata-sections
+WARNINGS = -Wall -Wextra -std=gnu++0x
+CXXFLAGS = -pipe -fshow-column -fPIC $(OPTIMIZE) $(WARNINGS)
 LDFLAGS = -pg -g -L. -Wl,--no-undefined
 LIBS = -lboost_thread
 
@@ -19,7 +19,7 @@ LIBS = -lboost_thread
 #else
 #assumed to be on Linux
 EXEEXT = 
-CXX = g++-4.4 -std=gnu++0x
+CXX = g++-4.4
 CC = gcc-4.4
 LD = $(CC)
 LDXX = $(CXX)
@@ -53,6 +53,7 @@ INS_QKF_NED_OBJS = ins_qkf_observe_gps_p.o \
 	ins_qkf_observe_vector.o \
 	ins_qkf_predict_ned.o \
 	basic_ins_qkf.o \
+	diagnostics.o \
 	$(TARGETDIR)/timer.o
 
 INS_QKF_ECEF_OBJS = ins_qkf_observe_gps_pvt.o \
@@ -60,6 +61,7 @@ INS_QKF_ECEF_OBJS = ins_qkf_observe_gps_pvt.o \
 	ins_qkf_observe_vector.o \
 	ins_qkf_predict.o \
 	basic_ins_qkf.o \
+	diagnostics.o \
 	$(TARGETDIR)/timer.o
 
 PLATFORM_OBJS = $(TARGETDIR)/timer.o \
