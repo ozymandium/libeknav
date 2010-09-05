@@ -35,8 +35,6 @@ using Eigen::aligned_allocator;
 struct basic_ins_qkf
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-	/// The maximum number of satellites that may be tracked by the filter
-	static const size_t max_sv = 12;
 	/**
 	 * The covariance of the zero-mean gaussian white noise that is added to
 	 * the gyro bias at each time step.  This value is treated as a diagonal
@@ -79,17 +77,6 @@ struct basic_ins_qkf
 			assert(!has_nan());
 		}
 
-#if 0
-		template <typename Vector_T>
-		state(const state& mean, const Vector_T& error, bool)
-			: gyro_bias(mean.gyro_bias + error.segment(0, 3))
-			, orientation(mean.orientation * exp<double>(error.segment(3, 3)))
-			, position(mean.position + error.segment(6, 3).template cast<double>())
-			, velocity(mean.velocity + error.segment(9, 3))
-		{
-			assert(!has_nan());
-		}
-#endif
 		/**
 		 * Default-construct an undefined state object.
 		 * @return
@@ -103,7 +90,6 @@ struct basic_ins_qkf
 		 * @return The rotation applied to the mean orientation
 		 */
 		Quaterniond apply_kalman_vec_update(const Matrix<double, 12, 1> update);
-		Quaterniond apply_left_kalman_vec_update(const Matrix<double, 12, 1> update);
 
 		/**
 		 * An estimate of the bias error in the rate gyros, in radians/second
@@ -156,7 +142,9 @@ struct basic_ins_qkf
 	 * @param accel_white_noise The diagonal matrix of accelerometer white noise
 	 */
 	basic_ins_qkf(const Vector3d& pos_estimate,
-			double pos_error, double bias_error, double v_error,
+			double pos_error,
+			double bias_error,
+			double v_error,
 			const Vector3d& gyro_white_noise,
 			const Vector3d& gyro_stability_noise,
 			const Vector3d& accel_white_noise,
@@ -199,7 +187,10 @@ struct basic_ins_qkf
 	 * @param p_error The RMS position error, (m)^2
 	 * @param v_error The RMS velocity error, (m/s)^2
 	 */
-	void obs_gps_pv_report(const Vector3d& pos, const Vector3d& vel, const Vector3d& p_error, const Vector3d v_error);
+	void obs_gps_pv_report(const Vector3d& pos,
+			const Vector3d& vel,
+			const Vector3d& p_error,
+			const Vector3d v_error);
 
 	/**
 	 * Incorporate a GPS position report, in either ECEF or NED coordinates.

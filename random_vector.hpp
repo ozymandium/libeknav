@@ -33,7 +33,7 @@
  * @param Length The number of dimensions of the vector.  Eigen::Dynamic
  * is allowed
  * @param Prng The underlying continuous random vector type.  Defaults to
- * a linear congruential generator.
+ * Mersonne Twister.
  */
 template<typename FloatT, int Length, typename Prng = boost::mt19937>
 class RandomVector

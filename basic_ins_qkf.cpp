@@ -24,8 +24,7 @@
 
 using namespace Eigen;
 
-basic_ins_qkf::basic_ins_qkf(
-		const Vector3d& estimate,
+basic_ins_qkf::basic_ins_qkf(const Vector3d& estimate,
 		double pos_error, double bias_error, double v_error,
 		const Vector3d& gyro_white_noise,
 		const Vector3d& gyro_stability_noise,

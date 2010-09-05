@@ -27,10 +27,14 @@
 using Eigen::Quaternion;
 
 template<typename FloatT>
-Quaternion<FloatT> operator-(const Quaternion<FloatT>& q)
+inline Quaternion<FloatT>
+operator-(const Quaternion<FloatT>& q)
 {
 	return Quaternion<FloatT>(-q.w(), -q.x(), -q.y(), -q.z());
 }
+
+template<typename FloatT>
+Quaternion<FloatT> exp_r(const Eigen::Matrix<FloatT, 3, 1>& v);
 
 /**
  * Convert a rotation from modified Rodrigues parameters to a quaternion.
@@ -38,7 +42,8 @@ Quaternion<FloatT> operator-(const Quaternion<FloatT>& q)
  * @return The quaternion corresponding to that rotation.
  */
 template<typename FloatT>
-Quaternion<FloatT> exp_r(const Eigen::Matrix<FloatT, 3, 1>& v)
+Quaternion<FloatT>
+exp_r(const Eigen::Matrix<FloatT, 3, 1>& v)
 {
 	// a2 = tan^2(theta/4)
 	FloatT a2 = v.squaredNorm();
@@ -50,9 +55,12 @@ Quaternion<FloatT> exp_r(const Eigen::Matrix<FloatT, 3, 1>& v)
 	ret.w() = (1-a2)/(1+a2);
 	return ret;
 }
+template<typename FloatT>
+Eigen::Matrix<FloatT, 3, 1> log_r(const Quaternion<FloatT>& q);
 
 template<typename FloatT>
-Eigen::Matrix<FloatT, 3, 1> log_r(const Quaternion<FloatT>& q)
+Eigen::Matrix<FloatT, 3, 1>
+log_r(const Quaternion<FloatT>& q)
 {
 	// Note: This algorithm is reasonably safe when using double
 	// precision (to within 1e-10 of precision), but not float.
@@ -81,7 +89,8 @@ template<typename FloatT>
 Quaternion<FloatT> exp(Eigen::Matrix<FloatT, 3, 1> v);
 
 template<typename FloatT>
-Quaternion<FloatT> exp(Eigen::Matrix<FloatT, 3, 1> v)
+Quaternion<FloatT>
+exp(Eigen::Matrix<FloatT, 3, 1> v)
 {
 	FloatT angle = v.norm();
     Quaternion<FloatT> ret;
@@ -130,7 +139,8 @@ template<typename FloatT>
 Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q);
 
 template<typename FloatT>
-Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q)
+Eigen::Matrix<FloatT, 3, 1>
+log(const Quaternion<FloatT>& q)
 {
 	FloatT mag = q.vec().norm();
 	// Note, sin(x) expands into x - x**3 / 6 + (higher order terms).
@@ -156,7 +166,8 @@ Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q)
  * @return a cross product matrix following the identity
  * 	cross(v)*x == v.cross(x)
  */
-inline Matrix<double, 3, 3> cross(const Matrix<double, 3, 1>& v)
+inline Matrix<double, 3, 3>
+cross(const Matrix<double, 3, 1>& v)
 {
 	return (Matrix<double, 3, 3>() <<
 		0, -v[2], v[1],

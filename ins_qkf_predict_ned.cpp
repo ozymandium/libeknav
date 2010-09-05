@@ -25,7 +25,9 @@
 using namespace Eigen;
 
 void
-basic_ins_qkf::predict_ned(const Vector3d& gyro_meas, const Vector3d& accel_meas, double dt)
+basic_ins_qkf::predict_ned(const Vector3d& gyro_meas,
+		const Vector3d& accel_meas,
+		double dt)
 {
 #ifdef TIME_OPS
 	timer clock;

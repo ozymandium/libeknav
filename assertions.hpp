@@ -33,7 +33,8 @@ template<typename MatrixBase>
 bool hasInf(const MatrixBase& expr);
 
 template<typename MatrixBase>
-bool hasNaN(const MatrixBase& expr)
+bool
+hasNaN(const MatrixBase& expr)
 {
 	for (int j = 0; j != expr.cols(); ++j) {
 		for (int i = 0; i != expr.rows(); ++i) {
@@ -45,7 +46,8 @@ bool hasNaN(const MatrixBase& expr)
 }
 
 template<typename MatrixBase>
-bool hasInf(const MatrixBase& expr)
+bool
+hasInf(const MatrixBase& expr)
 {
 	for (int i = 0; i != expr.cols(); ++i) {
 		for (int j = 0; j != expr.rows(); ++j) {
@@ -57,7 +59,8 @@ bool hasInf(const MatrixBase& expr)
 }
 
 template<typename MatrixBase>
-bool isReal(const MatrixBase& exp)
+bool
+isReal(const MatrixBase& exp)
 {
 	return !hasNaN(exp) && ! hasInf(exp);
 }

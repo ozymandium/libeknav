@@ -38,7 +38,10 @@ axis_scale(const Vector3d& axis, double scale)
 }
 
 void
-linear_predict(basic_ins_qkf& _this, const Vector3d& gyro_meas, const Vector3d& accel_meas, double dt)
+linear_predict(basic_ins_qkf& _this,
+		const Vector3d& gyro_meas,
+		const Vector3d& accel_meas,
+		double dt)
 {
 	// The two components of rotation that do not spin about the gravity vector
 	// have an influence on the position and velocity of the vehicle.
@@ -134,7 +137,9 @@ linear_predict(basic_ins_qkf& _this, const Vector3d& gyro_meas, const Vector3d& 
 } // !namespace (anon)
 
 void
-basic_ins_qkf::predict(const Vector3d& gyro_meas, const Vector3d& accel_meas, double dt)
+basic_ins_qkf::predict(const Vector3d& gyro_meas,
+		const Vector3d& accel_meas,
+		double dt)
 {
 #ifdef TIME_OPS
 	timer clock;

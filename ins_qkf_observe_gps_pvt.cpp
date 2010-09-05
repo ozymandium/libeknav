@@ -59,9 +59,10 @@ basic_ins_qkf::obs_gps_v_report(const Vector3d& vel, const Vector3d& v_error)
 }
 
 void
-basic_ins_qkf::obs_gps_pv_report(
-		const Vector3d& pos, const Vector3d& vel,
-		const Vector3d& p_error, const Vector3d v_error)
+basic_ins_qkf::obs_gps_pv_report(const Vector3d& pos,
+		const Vector3d& vel,
+		const Vector3d& p_error,
+		const Vector3d v_error)
 {
 #ifdef TIME_OPS
 	timer clock;

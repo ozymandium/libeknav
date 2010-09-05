@@ -26,7 +26,8 @@
 #include <boost/lexical_cast.hpp>
 #include "timer.hpp"
 
-Quaterniond initial_orientation(void)
+Quaterniond
+initial_orientation(void)
 {
 	Matrix<double, 3, 3> orientation;
 	orientation.col(2) = Vector3d(0.707, 0.707, 0).normalized();
@@ -35,7 +36,8 @@ Quaterniond initial_orientation(void)
 	return Quaterniond(orientation);
 }
 
-void print_eigenvalues(const basic_ins_qkf& model)
+void
+print_eigenvalues(const basic_ins_qkf& model)
 {
 	for (int i = 0; i < 12; i += 3) {
 		Eigen::SelfAdjointEigenSolver<Matrix<double, 3, 3> > soln(model.cov.block<3, 3>(i, i));
@@ -43,7 +45,8 @@ void print_eigenvalues(const basic_ins_qkf& model)
 	}
 }
 
-void print_orientation_decomp(const basic_ins_qkf& model)
+void
+print_orientation_decomp(const basic_ins_qkf& model)
 {
 	Eigen::SelfAdjointEigenSolver<Matrix<double, 12, 12> > soln(
 		model.cov);
@@ -51,7 +54,8 @@ void print_orientation_decomp(const basic_ins_qkf& model)
 	std::cout << "\n\teigenvectors:\n" << soln.eigenvectors();
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	if (argc != 2) {
 		std::cout << "usage: test_ins_qkf n_iterations\n";

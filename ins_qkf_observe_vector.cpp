@@ -44,7 +44,9 @@ basic_ins_qkf::obs_gyro_bias(const Vector3d& bias, const Vector3d& bias_error)
 }
 
 void
-basic_ins_qkf::obs_vector(const Vector3d& ref, const Vector3d& obs, double error)
+basic_ins_qkf::obs_vector(const Vector3d& ref,
+		const Vector3d& obs,
+		double error)
 {
 #ifdef TIME_OPS
 	timer clock;
