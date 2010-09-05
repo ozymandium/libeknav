@@ -154,4 +154,34 @@ inline Matrix<double, 3, 3> cross(const Matrix<double, 3, 1>& v)
 		-v[1], v[0], 0).finished();
 }
 
+template<typename FloatT>
+Quaternion<FloatT>
+incremental_normalized(const Quaternion<FloatT>& q);
+
+/**
+ * Incrementally normalize a quaternion q.
+ * @precondition 1 - q.norm() < sqrt(machine_epsilon)
+ * @postcondition 1 - q.norm() <= machine_epsilon
+ * @param q A nearly normalized quaternion to be completely normalized
+ * @return The completely normalized quaternion
+ */
+template<typename FloatT>
+Quaternion<FloatT>
+incremental_normalized(const Quaternion<FloatT>& q)
+{
+    FloatT norm2 = q.coeffs().squaredNorm();
+    // 1 Newton iteration of 1/sqrt(x), given a definition of refine like
+    // est*0.5*(3 - x*est*est)
+    // with an initial estimate of 1.0.  If the true norm is less than
+    // sqrt(eps) away from 1.0, then this completely normalizes the quaternion.
+    FloatT invSqrtMag = 0.5*(3 - norm2);
+    // Grumble, grumble, cannot construct from array of coefficients, grumble.
+    return Quaternion<FloatT>(
+            q.w()*invSqrtMag,
+            q.x()*invSqrtMag,
+            q.y()*invSqrtMag,
+            q.z()*invSqrtMag
+    );
+}
+
 #endif
