@@ -55,7 +55,6 @@ basic_ins_qkf::obs_gps_p_report(const Vector3d& pos, const Vector3d& p_error)
 	Matrix<double, 12, 1> update = kalman_gain * residual;
 	cov.part<Eigen::SelfAdjoint>() -= kalman_gain * cov.block<3, 12>(6, 0);
 #endif
-	Quaterniond rotor = avg_state.apply_kalman_vec_update(update);
-	counter_rotate_cov(rotor);
-	assert(is_real());
+	avg_state.apply_kalman_vec_update(update);
+	assert(invariants_met());
 }

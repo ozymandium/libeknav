@@ -54,9 +54,8 @@ basic_ins_qkf::obs_gps_v_report(const Vector3d& vel, const Vector3d& v_error)
 	Matrix<double, 12, 1> update = kalman_gain_t.transpose() * residual;
 #endif
 
-	Quaterniond rotor = avg_state.apply_kalman_vec_update(update);
-	counter_rotate_cov(rotor);
-	assert(is_real());
+	avg_state.apply_kalman_vec_update(update);
+	assert(inveriants_met());
 }
 
 void
@@ -71,6 +70,7 @@ basic_ins_qkf::obs_gps_pv_report(
 #if 1
 	obs_gps_p_report(pos, p_error);
 	obs_gps_v_report(vel, v_error);
+
 #else
 
 	// The observation model is strictly linear here, so use the linear

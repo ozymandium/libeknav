@@ -40,6 +40,7 @@ basic_ins_qkf::obs_gyro_bias(const Vector3d& bias, const Vector3d& bias_error)
 
 	// Apply the Kalman gain to obtain the posterior state and error estimates.
 	avg_state.apply_kalman_vec_update(kalman_gain * innovation);
+	assert(invariants_met());
 }
 
 void
@@ -88,10 +89,9 @@ basic_ins_qkf::obs_vector(const Vector3d& ref, const Vector3d& obs, double error
 	// std::cout << "projected update: " << (obs_projection * update.segment<3>(3)).transpose() << "\n";
 	std::cout << "deprojected update: " << update.segment<3>(3).transpose() << "\n";
 #endif
-	Quaterniond posterior_update = avg_state.apply_kalman_vec_update(update);
-	counter_rotate_cov(posterior_update);
+	avg_state.apply_kalman_vec_update(update);
 
-	assert(is_real());
+	assert(invariants_met());
 #ifdef TIME_OPS
 	double time = clock.stop() * 1e6;
 	std::cout << "observe_vector(): " << time << "\n";
