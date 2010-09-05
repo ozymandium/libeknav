@@ -61,15 +61,7 @@ linear_predict(basic_ins_qkf& _this,
 	// The acceleration acting on the body of the vehicle in the ECEF frame.
 	Vector3d accel = accel_body - accel_gravity;
 
-#if 0
-	Matrix<double, 3, 3> accel_cov =
-		Eigen::AngleAxisd(-M_PI*0.5, accel_dir)
-		* accel_dir * accel_dir.transpose() * accel_meas.norm();
-#elif 1
-	// This form is simpler to compute, and otherwise identical to the one
-	// above.
 	Matrix<double, 3, 3> accel_cov = cross(-accel_body);
-#endif
 
 	// The linearized Kalman state projection matrix.
 #if 0

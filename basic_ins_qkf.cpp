@@ -46,39 +46,6 @@ basic_ins_qkf::basic_ins_qkf(const Vector3d& estimate,
 	assert(invariants_met());
 }
 
-#if 0
-basic_ins_qkf::state
-basic_ins_qkf::average_sigma_points(const std::vector<state, aligned_allocator<state> >& points)
-{
-	state ret;
-	Vector3d sum;
-#define avg_vector_field(field) \
-	sum = Vector3d::Zero(); \
-	for (auto i = points.begin(), end = points.end(); i != end; ++i) { \
-		sum += i->field; \
-	} \
-	ret.field = sum / points.size()
-
-	avg_vector_field(gyro_bias);
-	avg_vector_field(velocity);
-
-	Vector3d p_sum = Vector3d::Zero();
-	for (auto i = points.begin(), end = points.end(); i != end; ++i) {
-		p_sum += i->position;
-	}
-	ret.position = p_sum / (double)points.size();
-
-	std::vector<Quaterniond> quat_points;
-	quat_points.reserve(points.size());
-	for (auto i = points.begin(), end = points.end(); i != end; ++i) {
-		quat_points.push_back(i->orientation);
-	}
-	ret.orientation = quaternion_avg_johnson(quat_points).normalized();
-	return ret;
-}
-#endif
-
-
 Quaterniond
 basic_ins_qkf::state::apply_kalman_vec_update(const Matrix<double, 12, 1> update)
 {

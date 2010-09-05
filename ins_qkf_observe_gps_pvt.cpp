@@ -87,7 +87,7 @@ basic_ins_qkf::obs_gps_pv_report(const Vector3d& pos,
 	//innovation_cov = obs_matrix * cov * obs_matrix.transpose();
 	innovation_cov.corner<3, 3>(Eigen::TopLeft) += p_error.asDiagonal();
 	innovation_cov.corner<3, 3>(Eigen::BottomRight) += v_error.asDiagonal();
-#if 1
+
 	// Perform matrix inverse by QR decomposition instead of cofactor expansion.
 	// K = P*transpose(H)*inverse(S)
 	// K = P*transpose(transpose(transpose(H)*inverse(S)))
@@ -99,9 +99,7 @@ basic_ins_qkf::obs_gps_pv_report(const Vector3d& pos,
 	Matrix<double, 6, 12> inv_s_h;
 	innovation_cov.qr().solve(obs_matrix, &inv_s_h);
 	Matrix<double, 12, 6> kalman_gain = cov * inv_s_h.transpose();
-#else
-	Matrix<double, 12, 6> kalman_gain = cov.block<12, 6>(0, 6) * innovation_cov.inverse();
-#endif
+
 	Quaterniond rotor = avg_state.apply_kalman_vec_update(kalman_gain * residual);
 	cov.part<Eigen::SelfAdjoint>() -= kalman_gain * obs_matrix * cov;
 	counter_rotate_cov(rotor);

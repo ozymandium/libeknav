@@ -64,19 +64,10 @@ quaternion_avg_johnson(const std::vector<Quaternion<FloatT> >& points)
 	for (std::size_t i = 0, end = points.size(); i != end; ++i) {
 		cols.col(i) = points[i].coeffs();
 	}
-	// Note: SVD may be applicable here
+
 	Quaternion<FloatT> ret;
-#if 1
 	SelfAdjointEigenSolver<Matrix<FloatT, 4, 4> > soln(cols * cols.transpose());
-	// std::cout << "Eigenvectors: " << soln.eigenvectors() << "\n";
-	// std::cout << "Eigenvalues: " << soln.eigenvalues().transpose() << "\n";
 	ret.coeffs() = soln.eigenvectors().col(3);
-#else
-	SVD<Matrix<FloatT, 4, 4> > svd(cols * cols.transpose());
-	// std::cout << "SVD.U: " << svd.matrixU() << std::endl;
-	// std::cout << "SVD.sigma: " << svd.singularValues().transpose() << std::endl;
-	ret.coeffs() = svd.matrixU().col(0);
-#endif
 	return ret;
 }
 

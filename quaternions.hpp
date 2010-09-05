@@ -96,35 +96,15 @@ exp(Eigen::Matrix<FloatT, 3, 1> v)
     Quaternion<FloatT> ret;
     if (angle <= std::sqrt(2*Eigen::machine_epsilon<FloatT>())) {
 		// cos(x) expands to 1 - x*x*0.5 + (higher order terms).  But since
-		// 1- sqrt(eps)^2 rounds to exactly 1.
+		// 1- sqrt(eps)^2 rounds to exactly 1 ...
         ret.w() = 1;
         // flush sin(x/2)/x to 0.5
         ret.vec() = 0.5*v;
 	}
 	else {
-#if 0
-		if (angle > 1.999*M_PI) {
-			// TODO: I really, really don't like this hack. It should
-			// be impossible to compute an angular measurement update
-			// with a rotation angle greater than this number...
-			v *= 1.999*M_PI / angle;
-			angle = 1.999*M_PI;
-		}
-#endif
 		assert(angle <= FloatT(2.0*M_PI));
-#if 0
-		// Oddly enough, this attempt to make the formula faster by reducing
-		// the number of trig calls actually runs slower. Too many divisions?
-		FloatT tan_x = std::tan(angle * 0.25);
-		FloatT cos_angle = (1 - tan_x*tan_x)/(1+tan_x*tan_x);
-		FloatT sin_angle = 2*tan_x/(1+tan_x*tan_x);
-		ret.w() = cos_angle;
-		ret.vec() = (sin_angle/angle)*v;
-#else
 		ret.w() = std::cos(angle*0.5);
 		ret.vec() = (std::sin(angle*0.5)/angle)*v;
-#endif
-		// return Quaternion<FloatT>(Eigen::AngleAxis<FloatT>(angle, v / angle));
 	}
     return ret;
 }
