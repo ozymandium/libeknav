@@ -84,12 +84,15 @@ template<typename FloatT>
 Quaternion<FloatT> exp(Eigen::Matrix<FloatT, 3, 1> v)
 {
 	FloatT angle = v.norm();
-	if (angle <= Eigen::machine_epsilon<FloatT>()) {
-		// std::cerr << "Warning: tiny quaternion flushed to zero\n";
-		return Quaternion<FloatT>::Identity();
+    Quaternion<FloatT> ret;
+    if (angle <= std::sqrt(2*Eigen::machine_epsilon<FloatT>())) {
+		// cos(x) expands to 1 - x*x*0.5 + (higher order terms).  But since
+		// 1- sqrt(eps)^2 rounds to exactly 1.
+        ret.w() = 1;
+        // flush sin(x/2)/x to 0.5
+        ret.vec() = 0.5*v;
 	}
 	else {
-		Quaternion<FloatT> ret;
 #if 0
 		if (angle > 1.999*M_PI) {
 			// TODO: I really, really don't like this hack. It should
@@ -102,7 +105,7 @@ Quaternion<FloatT> exp(Eigen::Matrix<FloatT, 3, 1> v)
 		assert(angle <= FloatT(2.0*M_PI));
 #if 0
 		// Oddly enough, this attempt to make the formula faster by reducing
-		// the number of trig calls actually runs slower.
+		// the number of trig calls actually runs slower. Too many divisions?
 		FloatT tan_x = std::tan(angle * 0.25);
 		FloatT cos_angle = (1 - tan_x*tan_x)/(1+tan_x*tan_x);
 		FloatT sin_angle = 2*tan_x/(1+tan_x*tan_x);
@@ -112,9 +115,9 @@ Quaternion<FloatT> exp(Eigen::Matrix<FloatT, 3, 1> v)
 		ret.w() = std::cos(angle*0.5);
 		ret.vec() = (std::sin(angle*0.5)/angle)*v;
 #endif
-		return ret;
 		// return Quaternion<FloatT>(Eigen::AngleAxis<FloatT>(angle, v / angle));
 	}
+    return ret;
 }
 
 /**
@@ -130,14 +133,21 @@ template<typename FloatT>
 Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q)
 {
 	FloatT mag = q.vec().norm();
-	if (mag <= Eigen::machine_epsilon<FloatT>()) {
-		// Flush to zero for very small angles.  This avoids division by zero.
-		return Eigen::Matrix<FloatT, 3, 1>::Zero();
+	// Note, sin(x) expands into x - x**3 / 6 + (higher order terms).
+	// This equation flushes to sin(x) == x exactly when x**3 / 6 < x*epsilon
+	// Solved for x, this becomes the inequality:
+	// x**2 < 6*epsilon
+	// x < sqrt(6*epsilon)
+	if (mag <= std::sqrt(6.0*Eigen::machine_epsilon<FloatT>())) {
+		// Flush to 2*vec for very small angles.  This avoids division by zero.
+        return q.vec()*2.0;
 	}
+    // Using atan2() here vice acos and asin makes the routine somewhat faster
+    // and numerically tolerant of quaternions slightly longer than unity
+	// According to Prof. Kahan, it is also more stable since it avoids the
+	// numerical singularities near acos(1) and asin(pi/2)
 	FloatT angle = 2.0*std::atan2(mag, q.w());
 	return q.vec() * (angle/mag);
-	// Eigen::AngleAxis<FloatT> res(q /*mag <= 1.0) ? q : q.normalized() */);
-	// return res.axis() * res.angle();
 }
 
 /**
@@ -161,7 +171,7 @@ incremental_normalized(const Quaternion<FloatT>& q);
 /**
  * Incrementally normalize a quaternion q.
  * @precondition 1 - q.norm() < sqrt(machine_epsilon)
- * @postcondition 1 - q.norm() <= machine_epsilon
+ * @postcondition 1 - q.norm() <= 2*machine_epsilon
  * @param q A nearly normalized quaternion to be completely normalized
  * @return The completely normalized quaternion
  */
@@ -170,18 +180,24 @@ Quaternion<FloatT>
 incremental_normalized(const Quaternion<FloatT>& q)
 {
     FloatT norm2 = q.coeffs().squaredNorm();
-    // 1 Newton iteration of 1/sqrt(x), given a definition of refine like
-    // est*0.5*(3 - x*est*est)
-    // with an initial estimate of 1.0.  If the true norm is less than
-    // sqrt(eps) away from 1.0, then this completely normalizes the quaternion.
-    FloatT invSqrtMag = 0.5*(3 - norm2);
-    // Grumble, grumble, cannot construct from array of coefficients, grumble.
-    return Quaternion<FloatT>(
-            q.w()*invSqrtMag,
-            q.x()*invSqrtMag,
-            q.y()*invSqrtMag,
-            q.z()*invSqrtMag
-    );
+    if (std::abs(1.0 - norm2) < 2*Eigen::machine_epsilon<FloatT>()) {
+    	// Less than 2 ulps of norm error.
+    	return q;
+    }
+    else {
+		// 1 Newton iteration of 1/sqrt(x), given a definition of refine like
+		// est*0.5*(3 - x*est*est)
+		// with an initial estimate of 1.0.  If the true norm is less than
+		// sqrt(eps) away from 1.0, then this completely normalizes the quaternion.
+		FloatT invSqrtMag = 0.5*(3 - norm2);
+		// Grumble, grumble, cannot construct from array of coefficients, grumble.
+		return Quaternion<FloatT>(
+				q.w()*invSqrtMag,
+				q.x()*invSqrtMag,
+				q.y()*invSqrtMag,
+				q.z()*invSqrtMag
+		);
+    }
 }
 
 #endif
