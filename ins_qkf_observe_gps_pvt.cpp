@@ -55,7 +55,7 @@ basic_ins_qkf::obs_gps_v_report(const Vector3d& vel, const Vector3d& v_error)
 #endif
 
 	avg_state.apply_kalman_vec_update(update);
-	assert(inveriants_met());
+	assert(invariants_met());
 }
 
 void
@@ -87,7 +87,7 @@ basic_ins_qkf::obs_gps_pv_report(
 	innovation_cov.corner<3, 3>(Eigen::TopLeft) += p_error.asDiagonal();
 	innovation_cov.corner<3, 3>(Eigen::BottomRight) += v_error.asDiagonal();
 #if 1
-	// Perform matrix inverse by LU decomposition instead of cofactor expansion.
+	// Perform matrix inverse by QR decomposition instead of cofactor expansion.
 	// K = P*transpose(H)*inverse(S)
 	// K = P*transpose(transpose(transpose(H)*inverse(S)))
 	// K = P*transpose(transpose(inverse(S))*H)

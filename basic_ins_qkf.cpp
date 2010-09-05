@@ -91,7 +91,6 @@ basic_ins_qkf::state::apply_kalman_vec_update(const Matrix<double, 12, 1> update
 	orientation = incremental_normalized(orientation * posterior_update);
 	position += update.segment<3>(6);
 	velocity += update.segment<3>(9);
-	assert(invariants_met());
 	return posterior_update;
 }
 
