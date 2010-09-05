@@ -1,5 +1,5 @@
-#ifndef AHRS_SIGMA_POINTS_HPP
-#define AHRS_SIGMA_POINTS_HPP
+#ifndef LIBEKNAV_SIGMA_POINTS_HPP
+#define LIBEKNAV_SIGMA_POINTS_HPP
 
 /*
  * sigma_points.hpp

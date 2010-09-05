@@ -1,5 +1,5 @@
-#ifndef AHRS_QUATERNIONS_HPP
-#define AHRS_QUATERNIONS_HPP
+#ifndef LIBEKNAV_QUATERNIONS_HPP
+#define LIBEKNAV_QUATERNIONS_HPP
 
 /*
  * quaternions.cpp

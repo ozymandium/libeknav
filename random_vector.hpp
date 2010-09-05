@@ -1,5 +1,5 @@
-#ifndef AHRS_RANDOM_VECTOR_HPP
-#define AHRS_RANDOM_VECTOR_HPP
+#ifndef LIBEKNAV_RANDOM_VECTOR_HPP
+#define LIBEKNAV_RANDOM_VECTOR_HPP
 /*
  * random_vector.hpp
  *

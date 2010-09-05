@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef AHRS_ASSERTIONS_HPP
-#define AHRS_ASSERTIONS_HPP
+#ifndef LIBEKNAV_ASSERTIONS_HPP
+#define LIBEKNAV_ASSERTIONS_HPP
 
 #include <Eigen/Core>
 #include <cmath>

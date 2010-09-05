@@ -1,5 +1,5 @@
-#ifndef AHRS_INS_QKF_HPP
-#define AHRS_INS_QKF_HPP
+#ifndef LIBEKNAV_INS_QKF_HPP
+#define LIBEKNAV_INS_QKF_HPP
 /*
  * ins_qkf.cpp
  *
