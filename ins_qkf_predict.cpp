@@ -52,29 +52,21 @@ linear_predict(basic_ins_qkf& _this, const Vector3d& gyro_meas, const Vector3d& 
 	// accel_cov is the relationship between error vectors in the tangent space
 	// of the vehicle orientation and the translational reference frame.
 	Vector3d accel_body = _this.avg_state.orientation.conjugate()*accel_meas;
+	// The acceleration due to gravity as observed by the sensor. (a force
+	// away from the earth).
 	Vector3d accel_gravity = _this.avg_state.position.normalized()*9.81;
-	Vector3d accel_resid = accel_body - accel_gravity;
+	// The acceleration acting on the body of the vehicle in the ECEF frame.
+	Vector3d accel = accel_body - accel_gravity;
+
 #if 0
-	// This form works well with zero static acceleration.
 	Matrix<double, 3, 3> accel_cov =
-		Eigen::AngleAxisd(-M_PI*0.5, _this.avg_state.position.normalized())
-		* axis_scale(_this.avg_state.position.normalized(), 0) * 9.81;
+		Eigen::AngleAxisd(-M_PI*0.5, accel_dir)
+		* accel_dir * accel_dir.transpose() * accel_meas.norm();
 #elif 1
-	Matrix<double, 3, 3> accel_cov =
-		Eigen::AngleAxisd(-M_PI*0.5, accel_body.normalized())
-		* axis_scale(accel_body.normalized(), 0) * accel_meas.norm();
-#else
-	// The following form ends up being identical to the simpler one
-	// above
-	Matrix<double, 3, 3> accel_cov = 
-		Eigen::AngleAxisd(-M_PI*0.5, _this.avg_state.position.normalized())
-		* axis_scale(_this.avg_state.position.normalized(), 0) * 9.81
-		+ Eigen::AngleAxisd(-M_PI*0.5, accel_resid.normalized())
-		* axis_scale(accel_resid.normalized(), 0)*accel_resid.norm();
+	// This form is simpler to compute, and otherwise identical to the one
+	// above.
+	Matrix<double, 3, 3> accel_cov = cross(-accel_body);
 #endif
-	// TODO: Optimization opportunity: the accel_cov doesn't change much over
-	// the life of a mission. Precompute it once and then retain the original.
-	// Then, only one 3x3 block ever gets updated in the A matrix below.
 
 	// The linearized Kalman state projection matrix.
 #if 0
@@ -130,12 +122,12 @@ linear_predict(basic_ins_qkf& _this, const Vector3d& gyro_meas, const Vector3d& 
 
 	Quaterniond orientation = exp<double>((gyro_meas - _this.avg_state.gyro_bias) * dt)
 			* _this.avg_state.orientation;
-	Vector3d accel = accel_body - _this.avg_state.position.normalized() * 9.81;
 	Vector3d position = _this.avg_state.position + _this.avg_state.velocity * dt + 0.5*accel*dt*dt;
 	Vector3d velocity = _this.avg_state.velocity + accel*dt;
 
 	_this.avg_state.position = position;
 	_this.avg_state.velocity = velocity;
+	// Note: Renormalization occurs during all measurement updates.
 	_this.avg_state.orientation = orientation;
 }
 
@@ -151,6 +143,8 @@ basic_ins_qkf::predict(const Vector3d& gyro_meas, const Vector3d& accel_meas, do
 
 	// Always use linearized prediction
 	linear_predict(*this, gyro_meas, accel_meas, dt);
+
+	assert(invariants_met());
 
 #ifdef TIME_OPS
 	double time = clock.stop()*1e6;

@@ -32,10 +32,8 @@ basic_ins_qkf::predict_ned(const Vector3d& gyro_meas, const Vector3d& accel_meas
 	clock.start();
 #endif
 	Vector3d accel_body = avg_state.orientation.conjugate()*accel_meas;
-	Vector3d accel_dir = accel_body.normalized();
-	Matrix<double, 3, 3> accel_cov =
-		Eigen::AngleAxisd(-M_PI*0.5, accel_dir)
-		* accel_dir * accel_dir.transpose() * accel_meas.norm();
+	// Vector3d accel_dir = accel_body.normalized();
+	Matrix<double, 3, 3> accel_cov = cross(-accel_body);
 
 	// 1500x realtime, without vectorization, on 2.2 GHz Athlon X2
 	const Matrix<double, 12, 12> pcov = cov;
@@ -74,30 +72,32 @@ basic_ins_qkf::predict_ned(const Vector3d& gyro_meas, const Vector3d& accel_meas
 
 	Quaterniond orientation = exp<double>((gyro_meas - avg_state.gyro_bias) * dt)
 			* avg_state.orientation;
-	Vector3d accel = accel_body - Vector3d::UnitZ() * 9.81;
+	// The contribution of the acceleration due to gravity on the accelerometer.
+	// Note that in NED, the z axis is down, and the accelerometer observes
+	// an extra acceleration due to gravity in the "up" direction.
+	Vector3d accel_gravity = -Vector3d::UnitZ() * 9.81;
+	Vector3d accel = accel_body - accel_gravity;
 	Vector3d position = avg_state.position + avg_state.velocity * dt + 0.5*accel*dt*dt;
 	Vector3d velocity = avg_state.velocity + accel*dt;
 
 	avg_state.position = position;
 	avg_state.velocity = velocity;
+	// Note: Renormalization occurs during all measurement updates.
 	avg_state.orientation = orientation;
 
+	assert(invariants_met());
 #ifdef TIME_OPS
 	double time = clock.stop()*1e6;
 	std::cout << "unscented predict time: " << time << "\n";
 #endif
 }
 
-/**
- * Observe a GPS vector track over ground report, in north-east-down coordinates
- * @param vel The 2d velocity value, parallel to the ground, in m/s
- * @param v_error The one-sigma RMS velocity error (m/s)^2
- */
 void
 basic_ins_qkf::obs_gps_vtg_report(const Vector2d vel, const double v_error)
 {
-#if 1
 	Vector2d residual = vel - avg_state.velocity.start<2>();
+#if 0
+	// Compute using a single block update
 	Matrix<double, 2, 2> innovation_cov = cov.block<2, 2>(9, 9)
 			+ (Vector2d() << v_error, v_error).finished().asDiagonal();
 
@@ -108,18 +108,17 @@ basic_ins_qkf::obs_gps_vtg_report(const Vector2d vel, const double v_error)
 	Matrix<double, 12, 1> update = kalman_gain * residual;
 
 #else
-	// WARNING: Running rank-one updates in velocity tends to destabilize
-	// the filter during initialization.
+	// Compute using rank-one updates
 	Matrix<double, 12, 1> update = Matrix<double, 12, 1>::Zero();
 	for (int i = 0; i < 2; ++i) {
-		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 9+i) / innovation_cov(i, i);
+		double innovation_cov_inv = 1.0/(cov(9+i, 9+i) + v_error);
+		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 9+i) / innovation_cov_inv;
 		update += gain * (residual[i] - update[9+i]);
-		cov -= gain * cov.block<1, 12>(9+i, 0);
+		cov.part<Eigen::SelfAdjoint>() -= gain * cov.block<1, 12>(9+i, 0);
 	}
 #endif
 
-	Quaterniond rotor = avg_state.apply_kalman_vec_update(update);
-	counter_rotate_cov(rotor);
-	assert(is_real());
+	avg_state.apply_kalman_vec_update(update);
+	assert(invariants_met());
 }
 
