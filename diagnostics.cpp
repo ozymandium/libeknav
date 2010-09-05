@@ -15,10 +15,6 @@
 
 using namespace Eigen;
 
-/*
- *
- */
-
 basic_ins_qkf::state_error_t
 basic_ins_qkf::sigma_point_difference(const basic_ins_qkf::state& median,
 	const basic_ins_qkf::state& point) const

@@ -38,8 +38,9 @@ hasNaN(const MatrixBase& expr)
 {
 	for (int j = 0; j != expr.cols(); ++j) {
 		for (int i = 0; i != expr.rows(); ++i) {
-			if (std::isnan(expr.coeff(i, j)))
+			if (std::isnan(expr.coeff(i, j))) {
 				return true;
+			}
 		}
 	}
 	return false;
@@ -51,8 +52,9 @@ hasInf(const MatrixBase& expr)
 {
 	for (int i = 0; i != expr.cols(); ++i) {
 		for (int j = 0; j != expr.rows(); ++j) {
-			if (std::isinf(expr.coeff(j, i)))
+			if (std::isinf(expr.coeff(j, i))) {
 				return true;
+			}
 		}
 	}
 	return false;
