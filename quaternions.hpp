@@ -124,7 +124,7 @@ Quaternion<FloatT> exp(Eigen::Matrix<FloatT, 3, 1> v)
  * @return The 3-vector in the tangent space of the quaternion q.
  */
 template<typename FloatT>
-Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q) __attribute__((noinline));
+Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q);
 
 template<typename FloatT>
 Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q)
@@ -138,6 +138,20 @@ Eigen::Matrix<FloatT, 3, 1> log(const Quaternion<FloatT>& q)
 	return q.vec() * (angle/mag);
 	// Eigen::AngleAxis<FloatT> res(q /*mag <= 1.0) ? q : q.normalized() */);
 	// return res.axis() * res.angle();
+}
+
+/**
+ * Compute the cross-product matrix of a 3-vector.
+ * @param v A vector in R3
+ * @return a cross product matrix following the identity
+ * 	cross(v)*x == v.cross(x)
+ */
+inline Matrix<double, 3, 3> cross(const Matrix<double, 3, 1>& v)
+{
+	return (Matrix<double, 3, 3>() <<
+		0, -v[2], v[1],
+		v[2], 0, -v[0],
+		-v[1], v[0], 0).finished();
 }
 
 #endif
