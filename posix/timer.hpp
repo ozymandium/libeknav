@@ -1,5 +1,5 @@
-#ifndef AHRS_TIMER_HPP
-#define AHRS_TIMER_HPP
+#ifndef LIBEKNAV_TIMER_HPP
+#define LIBEKNAV_TIMER_HPP
 
 #include <sys/time.h>
 

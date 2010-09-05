@@ -5,12 +5,14 @@ timer::timer()
 {
 }
 
-void timer::start()
+void
+timer::start()
 {
 	gettimeofday(&start_t, NULL);
 }
 
-double timer::stop()
+double
+timer::stop()
 {
 	struct timeval stop;
 	gettimeofday(&stop, NULL);
