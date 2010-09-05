@@ -44,26 +44,9 @@ basic_ins_qkf::basic_ins_qkf(
 		Matrix3d::Zero(), Matrix3d::Identity()*M_PI*M_PI*0.5, Matrix<double, 3, 6>::Zero(),
 		Matrix<double, 3, 6>::Zero(), Matrix3d::Identity()*pos_error*pos_error, Matrix3d::Zero(),
 		Matrix<double, 3, 9>::Zero(), Matrix3d::Identity()*v_error*v_error;
-	assert(is_real());
+	assert(invariants_met());
 }
 
-void
-basic_ins_qkf::counter_rotate_cov(const Quaterniond&)
-{
-	// Rotate the principle axes of the angular error covariance by the
-	// mean update.
-
-	// TODO: This is only required in the case that the system covariance is
-	// right-multiplied by the mean. The current design left-multiplies the
-	// covariance by the mean.
-	return;
-
-	// TODO: There should be an expression that makes both this matrix's
-	// construction and multiplication much more efficient.
-	// Matrix<double, 12, 12> counter_rot = Matrix<double, 12, 12>::Identity();
-	// counter_rot.block<3, 3>(3, 3) = update.cast<double>().conjugate().toRotationMatrix();
-	// cov = (counter_rot * cov.cast<double>() * counter_rot.transpose()).cast<float>();
-}
 #if 0
 basic_ins_qkf::state
 basic_ins_qkf::average_sigma_points(const std::vector<state, aligned_allocator<state> >& points)
@@ -96,11 +79,6 @@ basic_ins_qkf::average_sigma_points(const std::vector<state, aligned_allocator<s
 }
 #endif
 
-bool
-basic_ins_qkf::is_real(void) const
-{
-	return !(hasNaN(cov) || hasInf(cov)) && avg_state.is_real();
-}
 
 Quaterniond
 basic_ins_qkf::state::apply_kalman_vec_update(const Matrix<double, 12, 1> update)
@@ -110,43 +88,11 @@ basic_ins_qkf::state::apply_kalman_vec_update(const Matrix<double, 12, 1> update
 	// std::cout << "\n\tupdate: " << update.transpose() << "\n";
 	gyro_bias += update.segment<3>(0);
 	Quaterniond posterior_update = exp<double>(update.segment<3>(3));
-	orientation = (orientation * posterior_update).normalized();
+	orientation = incremental_normalized(orientation * posterior_update);
 	position += update.segment<3>(6);
 	velocity += update.segment<3>(9);
-	assert(is_real());
+	assert(invariants_met());
 	return posterior_update;
 }
 
-#if 0
-Quaterniond
-basic_ins_qkf::state::apply_left_kalman_vec_update(const Matrix<double, 12, 1> update)
-{
-	// std::cout << "***update available***\n"
-	// 		<< "\tstate: "; print(std::cout);
-	// std::cout << "\n\tupdate: " << update.transpose() << "\n";
-	gyro_bias += update.segment<3>(0);
-	Quaterniond posterior_update = exp<double>(update.segment<3>(3));
-	orientation = (posterior_update * orientation).normalized();
-	position += update.segment<3>(6);
-	velocity += update.segment<3>(9);
-	assert(is_real());
-	return posterior_update;
-}
-#endif
-
-bool
-basic_ins_qkf::state::has_nan(void)const
-{
-	return hasNaN(gyro_bias) || hasNaN(orientation.coeffs())
-			|| hasNaN(position) || hasNaN(velocity);
-}
-
-bool
-basic_ins_qkf::state::is_real(void) const
-{
-	return !(hasNaN(gyro_bias) || hasNaN(orientation.coeffs())
-			|| hasNaN(position) || hasNaN(velocity))
-			&& !(hasInf(gyro_bias) || hasInf(orientation.coeffs())
-				|| hasInf(position) || hasInf(velocity));
-}
 

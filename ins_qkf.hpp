@@ -217,7 +217,8 @@ struct basic_ins_qkf
 
 	/**
 	 * Observe a GPS vector track over ground report, in north-east-down coordinates
-	 * @param vel The 2d velocity value, parallel to the ground, in m/s
+	 * @param vel The 2d velocity value, parallel to the ground, in m/s, of
+	 * 	the north and east axes.
 	 * @param v_error The one-sigma RMS velocity error (m/s)^2
 	 */
 	void obs_gps_vtg_report(const Vector2d vel, const double v_error);
@@ -269,12 +270,12 @@ private:
 	/// Compute the error difference between a sigma point and the mean as: point - mean
 	state_error_t sigma_point_difference(const state& mean, const state& point) const;
 
-
+	/**
+	 * A predicate that returns true when all of the class invariants are
+	 * met
+	 */
+	bool invariants_met() const;
 public:
-	/** Perform the posterior counter-rotation of the covariance matrix by
-	  the update that gets applied to the estimated state.
-	  */
-	void counter_rotate_cov(const Quaterniond& update);
 
 	/**
 	 * Verify that the covariance and average state are niether NaN nor Inf
