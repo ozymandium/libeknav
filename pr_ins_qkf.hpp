@@ -158,6 +158,18 @@ struct pseudorange_ins_qkf
 	pseudorange_ins_qkf();
 
 	/**
+	 * Initialize the attitude to @paramref attitude, and error matrix to
+	 * attitude_error.  All cross-covariance terms between this value and others
+	 * in the system covariance matrix are set to zero.
+	 */
+	void init_attitude(const Quaterniond& attitude, const Eigen::Matrix3f& attitude_error);
+	/// Initialize the vehicle velocity to vel, with diagonal error vel_error
+	void init_velocity(const Vector3d& vel, const Vector3f& vel_error);
+	/// Initialize the vehicle position to vel, with diagonal error pos_error
+	void init_position(const Vector3d& pos, const Vector3f& pos_error);
+
+
+	/**
 	 * Report an INS observation, to propagate the filter forward by one time
 	 * step. The coordinate system is maintained in ECEF coordinates.
 	 * TODO: Provide a workspace parameter for storage that should be
