@@ -1,6 +1,6 @@
 
 CPPFLAGS = -I./ -DEIGEN_DONT_ALIGN -DEIGEN_DONT_VECTORIZE 
-OPTIMIZE = -O3 -ffast-math -g -ffunction-sections -fdata-sections
+OPTIMIZE = -Os -ffast-math -g -ffunction-sections -fdata-sections
 WARNINGS = -Wall -Wextra -std=gnu++0x
 CXXFLAGS = -pipe -fshow-column -fPIC $(OPTIMIZE) $(WARNINGS)
 LDFLAGS = -pg -g -L. -Wl,--no-undefined
@@ -47,7 +47,8 @@ INS_QKF_OBJS = ins_qkf_observe_gps_pvt.o \
 	ins_qkf_observe_vector.o \
 	ins_qkf_predict.o \
 	diagnostics.o \
-	basic_ins_qkf.o
+	basic_ins_qkf.o \
+	pr_ins_qkf.o
 
 INS_QKF_NED_OBJS = ins_qkf_observe_gps_p.o \
 	ins_qkf_observe_vector.o \
@@ -62,7 +63,8 @@ INS_QKF_ECEF_OBJS = ins_qkf_observe_gps_pvt.o \
 	ins_qkf_predict.o \
 	basic_ins_qkf.o \
 	diagnostics.o \
-	$(TARGETDIR)/timer.o
+	$(TARGETDIR)/timer.o \
+	pr_ins_qkf.o
 
 PLATFORM_OBJS = $(TARGETDIR)/timer.o \
 	$(TARGETDIR)/random_seed.o

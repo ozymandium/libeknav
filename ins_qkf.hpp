@@ -1,7 +1,7 @@
 #ifndef LIBEKNAV_INS_QKF_HPP
 #define LIBEKNAV_INS_QKF_HPP
 /*
- * ins_qkf.cpp
+ * ins_qkf.hpp
  *
  *      Author: Jonathan Brandmeyer
  *
@@ -20,8 +20,8 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "sigma_points.hpp"
-#include "quaternions.hpp"
+#include <sigma_points.hpp>
+#include <quaternions.hpp>
 #include <Eigen/StdVector>
 
 using Eigen::Vector3f;

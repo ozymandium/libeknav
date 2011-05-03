@@ -146,10 +146,11 @@ log(const Quaternion<FloatT>& q)
  * @return a cross product matrix following the identity
  * 	cross(v)*x == v.cross(x)
  */
-inline Matrix<double, 3, 3>
-cross(const Matrix<double, 3, 1>& v)
+template<typename FloatT>
+Matrix<FloatT, 3, 3>
+cross(const Matrix<FloatT, 3, 1>& v)
 {
-	return (Matrix<double, 3, 3>() <<
+	return (Matrix<FloatT, 3, 3>() <<
 		0, -v[2], v[1],
 		v[2], 0, -v[0],
 		-v[1], v[0], 0).finished();

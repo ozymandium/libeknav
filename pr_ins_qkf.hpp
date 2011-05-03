@@ -1,7 +1,7 @@
 #ifndef LIBEKNAV_PR_INS_QKF_HPP
 #define LIBEKNAV_PR_INS_QKF_HPP
 /*
- * ins_qkf.cpp
+ * pr_ins_qkf.hpp
  *
  *      Author: Jonathan Brandmeyer
  *
@@ -20,8 +20,8 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "sigma_points.hpp"
-#include "quaternions.hpp"
+#include <sigma_points.hpp>
+#include <quaternions.hpp>
 #include <Eigen/StdVector>
 
 using Eigen::Vector3f;
@@ -74,9 +74,14 @@ struct pseudorange_ins_qkf
 	Vector3f accel_stability_noise;
 
 	/**
-	 *
+	 * The covariance of the GPS rcv clock bias noise, in m^2/s.   Default to 1 us/sqrt(s)
 	 */
-	float clock_white_noise;
+	float clock_stability_noise;
+
+	/**
+	 * The magnitude of the local acceleration due to gravity.
+	 */
+	float accel_gravity_norm;
 
 	/**
 	 * A term for the basic state of the system
@@ -127,10 +132,21 @@ struct pseudorange_ins_qkf
 		/// Clock bias term, in meters of light distance traveled.
 		float clock_bias;
 
+		/// The acceleration estimate of the vehicle, in the ECEF frame
+		Vector3f inertial_accel;
+
+		// The angular rate estimate of the vehicle, in the body frame
+		Vector3f body_rate;
+
 		/**
 		 * @return True if the state vector contains any NaNs
 		 */
 		bool has_nan(void) const;
+
+		/**
+		 * @return True if the state vector contains any Infs
+		 */
+		bool has_inf(void) const;
 
 		/**
 		 * @return True if the state vector does not contain any NaNs or Infs
@@ -229,6 +245,14 @@ struct pseudorange_ins_qkf
 	float gyro_bias_error(const Vector3f& gyro_bias) const;
 
 	/**
+	 * Measure the total accel bias error between the filter's estimate and
+	 * some other bias
+	 * @param accel_bias The accelerometer bias vector to compare against
+	 * @return The vector difference between them, in m/s/s
+	 */
+	float accel_bias_error(const Vector3f& accel_bias) const;
+
+	/**
 	 * Determine the statistical distance between an example sample point
 	 * and the distribution computed by the estimator.
 	 */
@@ -239,7 +263,7 @@ private:
 	/**
 	 * The type of an error term between two state vectors.
 	 */
-	typedef Eigen::Matrix<double, 12, 1> state_error_t;
+	typedef Eigen::Matrix<float, 16, 1> state_error_t;
 	/// Compute the error difference between a sigma point and the mean as: point - mean
 	state_error_t sigma_point_difference(const state& mean, const state& point) const;
 
@@ -248,6 +272,9 @@ private:
 	 * met
 	 */
 	bool invariants_met() const;
+
+	void clear_covariance_block(size_t row, const Eigen::Matrix3f& repl);
+
 public:
 
 	/**

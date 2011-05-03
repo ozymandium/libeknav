@@ -35,7 +35,7 @@ basic_ins_qkf::predict_ned(const Vector3d& gyro_meas,
 #endif
 	Vector3d accel_body = avg_state.orientation.conjugate()*accel_meas;
 	// Vector3d accel_dir = accel_body.normalized();
-	Matrix<double, 3, 3> accel_cov = cross(-accel_body);
+	Matrix<double, 3, 3> accel_cov = cross<double>(-accel_body);
 
 	// 1500x realtime, without vectorization, on 2.2 GHz Athlon X2
 	// See basic_ins_qkf::predict() for the full blockwise form
