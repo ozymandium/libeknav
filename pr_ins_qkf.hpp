@@ -216,7 +216,7 @@ struct pseudorange_ins_qkf
 	 * @param error The estimated one-sigma-squared error in the measurement, exclusive
 	 * of the clock error, in m^2.
 	 */
-	void obs_gps_pseudorange(const Vector3d& sat_pos, double pseudorange, float error);
+	void obs_gps_pseudorange(Matrix<float, 4, 1>& accum, const Vector3d& sat_pos, double pseudorange, float error);
 
 	/**
 	 * Make a single satellite speed observation
@@ -226,7 +226,9 @@ struct pseudorange_ins_qkf
 	 * 	GPS doppler signals
 	 * @param error The nominal error in the deltarange measurement.
 	 */
-	void obs_gps_deltarange(const Vector3d& sat_velocity, double deltarange, float error);
+	void obs_gps_deltarange(Matrix<float, 12, 1>& accum, const Vector3d& sat_velocity, double deltarange, float error);
+
+	void obs_gps_pv_report(const Vector3d& pos, const Vector3d& vel, const Vector3f& p_error, const Vector3f& v_error);
 
 	/**
 	 * Measure the total angular error between the filter's attitude estimate

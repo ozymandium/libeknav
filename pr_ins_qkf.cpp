@@ -41,7 +41,7 @@ pseudorange_ins_qkf::pseudorange_ins_qkf()
 	gyro_bias_rms *= gyro_bias_rms;
 
 	// default accelerometer bias: 15 mg
-	float accel_bias_rms = 15.0 * 9.81 / 1e3;
+	float accel_bias_rms = 0.3;
 	accel_bias_rms *= accel_bias_rms;
 
 	// default clock rms noise  1 us/sqrt(s), at 3e8 m/s
@@ -108,8 +108,12 @@ pseudorange_ins_qkf::clear_covariance_block(size_t rowcol,
 	}
 }
 
+/*
+ * The following functions are used to break out some common Eigen subexpressions
+ * in order to cut down on the size of generated code.
+ */
 namespace {
-/**
+/*
  * dst[dst_row, dst_col] += mult*src[src_row, src_col] + src[src_col, src_row]*mult.transpose()
  */
 void ssyr2k(Matrix<float, 12, 12>& dst, int dst_row, int dst_col,
@@ -119,7 +123,7 @@ void ssyr2k(Matrix<float, 12, 12>& dst, int dst_row, int dst_col,
 			+ src.block<3, 3>(src_col, src_row)*mult.transpose();
 }
 
-/**
+/*
  * dst[dst, dst] += mult * src[src, src] * mult'
  * dst and src both symmetric
  */
@@ -155,8 +159,8 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	// Some convenience blocks
 	const Matrix3f dtR = dt * attitude_conj.toRotationMatrix();
 	const Matrix3f dtQ = dt * accel_cov;
-
-	// For space savings, the matrix updates fall into the following basic forms:
+#if 1
+	// For space savings in flash, the matrix updates fall into the following basic forms:
 	// C += A*B*A'     // where B == B'
 	// C += A*B + B'A' // SSYR2K
 	// C += A * B'     // SGEMM
@@ -164,8 +168,6 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	// They can be refactored to use the above instead to save some flash space
 
 	// Compute the next covariance matrix using sparse blockwise operations.
-	// TODO: Consider factoring this out into primitive BLAS-like ops to save space
-	// TODO: This part certainly isn't right, thanks to changes in addressing
 	// nop
 	// this->cov.block<3, 3>(0, 0) = this->cov.block<3, 3>(0, 0);
 	this->cov.block<3, 3>(0, 3) -= cov.block<3,3>(0, 0)*dtR.transpose();
@@ -194,8 +196,6 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	// nop
 	// this->cov.block<3, 3>(9, 9) = this->cov.block<3, 3>(9, 9);
 
-	this->pt_cov.block<3, 3>(0, 0).part<Eigen::SelfAdjoint>() += dt*dt*cov.block<3, 3>(6, 6);
-
 	// Maintain symmetric form
 	struct blockaddr_t {
 		int row, col;
@@ -212,6 +212,23 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 		int col = block_addr[i].col;
 		this->cov.block<3, 3>(row, col) = this->cov.block<3, 3>(col, row).transpose();
 	}
+#else
+	// 50x RT
+	Matrix<float, 12, 12> A;
+	     // gyro bias row
+	A << Matrix<float, 3, 3>::Identity(), Matrix<float, 3, 9>::Zero(),
+		 // Orientation row
+		-dtR, Matrix<float, 3, 3>::Identity(), Matrix<float, 3, 6>::Zero(),
+		 // Velocity row
+		 Matrix<float, 3, 3>::Zero(), -dtQ, Matrix<float, 3, 3>::Identity(), -dtR,
+		 // accel bias row
+		 Matrix<float, 3, 9>::Zero(), Matrix<float, 3, 3>::Identity();
+
+	// 800x realtime, with vectorization
+
+	this->cov.part<Eigen::SelfAdjoint>() = A * cov.part<Eigen::SelfAdjoint>() * A.transpose();
+#endif
+	this->pt_cov.block<3, 3>(0, 0).part<Eigen::SelfAdjoint>() += dt*dt*cov.block<3, 3>(6, 6);
 
 	// Add Q-matrix state estimate noise blocks
 	this->cov.block<3, 3>(0, 0) += gyro_stability_noise.asDiagonal() * dt;
@@ -238,6 +255,147 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	assert(invariants_met());
 }
 
+void
+pseudorange_ins_qkf::obs_vector(const Vector3f& ref,
+		const Vector3f& obs,
+		float error)
+{
+	Vector3f obs_ref = avg_state.orientation.conjugate().cast<float>()*obs;
+	// TODO: Consider using MRP's instead
+	Vector3f v_residual = log<float>(Quaternionf().setFromTwoVectors(ref, obs_ref));
+
+	// H.transpose()
+    const float eps = std::sqrt(Eigen::machine_epsilon<float>()*1e3);
+	Matrix<float, 3, 2> h_trans;
+#if 0
+	h_trans.col(0) = ref.cross(
+		(abs(ref.dot(obs_ref)) < 0.9994f) ? obs_ref :
+			(abs(ref.dot(Vector3d::UnitX())) < 0.707)
+				? Vector3d::UnitX() : Vector3d::UnitY()).normalized();
+#endif
+	h_trans.col(0) = ref.cross(
+        ((ref - v_residual.normalized()).norm() > eps) ? v_residual.normalized() :
+            (abs(ref.dot(Vector3f::UnitX())) < 0.707) ? Vector3f::UnitX() :
+            	Vector3f::UnitY()).normalized();
+	h_trans.col(1) = -ref.cross(h_trans.col(0));
+
+	assert(!hasNaN(h_trans));
+	assert(h_trans.isUnitary());
+	Vector2f innovation = h_trans.transpose() * v_residual;
+
+	// Running a rank-one update here is a strict win.
+	Matrix<float, 12, 1> update = Matrix<float, 12, 1>::Zero();
+	for (int i = 0; i < 2; ++i) {
+		float obs_error = error;
+		float obs_cov = (h_trans.col(i).transpose() * cov.block<3, 3>(3, 3) * h_trans.col(i))[0];
+		Matrix<float, 12, 1> gain = cov.block<12, 3>(0, 3) * h_trans.col(i) / (obs_error + obs_cov);
+		update += gain * h_trans.col(i).transpose() * v_residual;
+		cov.part<Eigen::SelfAdjoint>() -= gain * h_trans.col(i).transpose() * cov.block<3, 12>(3, 0);
+	}
+
+
+#if DEBUG_VECTOR_OBS
+	// std::cout << "projected update: " << (obs_projection * update.segment<3>(3)).transpose() << "\n";
+	std::cout << "deprojected update: " << update.segment<3>(3).transpose() << "\n";
+#endif
+	avg_state.apply_kalman_vec_update(update);
+
+	assert(invariants_met());
+}
+
+void
+pseudorange_ins_qkf::obs_gps_pseudorange(Matrix<float, 4, 1>& accum,
+		const Vector3d& sat_pos,
+		double pseudorange,
+		float error)
+{
+	// Direction of the observation, as well as the predicted value of the pseudorange
+	Vector3d directiond;
+	directiond = (avg_state.position + accum.start<3>().cast<double>()) - sat_pos;
+	double prediction = directiond.norm();
+	directiond *= 1.0/prediction;
+	prediction += avg_state.clock_bias + accum(3);
+
+	Vector4f direction;
+	direction.start<3>() = directiond.cast<float>();
+	direction(3) = 1.0f;
+
+	float innovation_cov = direction.dot(pt_cov * direction);
+	double residual = prediction - pseudorange;
+	float innovation_cov_inverse = 1.0f/(innovation_cov + error);
+
+	// kalman gain
+	Matrix<float, 4, 1> gain = pt_cov * direction * innovation_cov_inverse;
+	// apply the gain
+	accum += gain * float(residual);
+	pt_cov -= gain * (direction.transpose() * pt_cov);
+}
+
+void
+pseudorange_ins_qkf::obs_gps_deltarange(Matrix<float, 12, 1>& accum,
+		const Vector3d& sat_vel,
+		double deltarange,
+		float error)
+{
+	// Direction of the observation, as well as the predicted value of the deltarange
+	Vector3d directiond;
+	directiond = (avg_state.velocity + accum.segment<3>(6).cast<double>()) - sat_vel;
+	double prediction = directiond.norm();
+	directiond *= 1.0/prediction;
+
+	Vector3f direction = directiond.cast<float>();
+
+	float innovation_cov = direction.dot(cov.block<3, 3>(6, 6) * direction);
+	double residual = prediction - deltarange;
+	float innovation_cov_inverse = 1.0f/(innovation_cov + error);
+
+	// kalman gain
+	Matrix<float, 12, 1> gain = cov.block<12, 3>(0, 6) * direction * innovation_cov_inverse;
+	// apply the gain
+	accum += gain * float(residual);
+	cov -= gain * (direction.transpose() * cov.block<3, 12>(6, 0));
+}
+
+void
+pseudorange_ins_qkf::obs_gps_pv_report(const Vector3d& pos,
+		const Vector3d& vel,
+		const Vector3f& p_error,
+		const Vector3f& v_error)
+{
+	// position part
+	{
+		Matrix<double, 3, 1> residual = pos - avg_state.position;
+		Matrix<float, 3, 3> innovation_cov = pt_cov.block<3, 3>(0, 0);
+		innovation_cov += p_error.asDiagonal();
+		Matrix<float, 4, 1> update = Matrix<float, 4, 1>::Zero();
+		for (int i = 0; i < 3; ++i) {
+			float innovation_cov_inv = 1.0/(pt_cov(i, i) + p_error[i]);
+			Matrix<float, 4, 1> gain = pt_cov.block<4, 1>(0, i) * innovation_cov_inv;
+			update += gain * (residual[i] - update[i]);
+			pt_cov -= gain * cov.block<1, 4>(i, 0);
+		}
+		avg_state.apply_kalman_vec_update(update);
+	}
+
+	{
+		// Velocity part
+		Vector3f residual = (vel - avg_state.velocity).cast<float>();
+		Matrix<float, 3, 3> innovation_cov = cov.block<3, 3>(6, 6);
+		innovation_cov += v_error.asDiagonal();
+
+		Matrix<float, 12, 1> update = Matrix<float, 12, 1>::Zero();
+		for (int i = 0; i < 3; ++i) {
+			float innovation_cov_inv = 1.0/(cov(6+i, 6+i) + v_error[i]);
+			Matrix<float, 12, 1> gain = cov.block<12, 1>(0, 6+i) * innovation_cov_inv;
+			update += gain * (residual[i] - update[6+i]);
+			cov -= gain * cov.block<1, 12>(6+i, 0);
+		}
+		avg_state.apply_kalman_vec_update(update);
+	}
+}
+
+
+#if 1
 bool
 pseudorange_ins_qkf::state::has_nan(void)const
 {
@@ -269,6 +427,7 @@ pseudorange_ins_qkf::state::is_real(void) const
 {
 	return !has_nan() && !has_inf();
 }
+#endif
 
 Quaterniond
 pseudorange_ins_qkf::state::apply_kalman_vec_update(const Matrix<float, 12, 1>& update)
@@ -288,6 +447,18 @@ pseudorange_ins_qkf::state::apply_kalman_vec_update(const Matrix<float, 4, 1>& u
 	clock_bias += update(3);
 }
 
+void
+pseudorange_ins_qkf::state::print(std::ostream& str)
+{
+	str << "gyro_bias: " << gyro_bias.transpose()
+		<< " accel_bias: " << accel_bias.transpose()
+		<< " orientation: " << orientation.coeffs().transpose()
+		<< " position: " << position.transpose()
+		<< " velocity: " << velocity.transpose()
+		<< " angular velocity: " << body_rate.transpose();
+}
+
+#if 1
 float
 pseudorange_ins_qkf::angular_error(const Quaterniond& q) const
 {
@@ -345,14 +516,14 @@ pseudorange_ins_qkf::sigma_point_difference(
 	return ret;
 }
 
-
+#endif
 bool
 pseudorange_ins_qkf::invariants_met(void) const
 {
 	// The whole thing breaks down if NaN or Inf starts popping up
 	return is_real() &&
 		// Incremental normalization is working
-		std::abs(1 - 1.0/avg_state.orientation.norm()) < std::sqrt(Eigen::machine_epsilon<double>());
+		std::abs(1 - 1.0/avg_state.orientation.norm()) < std::sqrt(Eigen::machine_epsilon<float>());
 }
 
 bool

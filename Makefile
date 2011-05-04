@@ -31,7 +31,8 @@ LDXX = $(CXX)
 RM = rm
 AR = ar
 
-all:  test_ins_qkf$(EXEXT) libeknav-ecef.so libeknav-ned.so
+all:  test_ins_qkf$(EXEXT) libeknav-ecef.so libeknav-ned.so \
+	monte_carlo_pr_ins_qkf$(EXEXT)
 
 tags : *.cpp
 	ctags ./*.cpp ./*.hpp
@@ -87,4 +88,7 @@ libeknav-ned.a: $(INS_QKF_NED_OBJS)
 test_ins_qkf$(EXEXT): test_ins_qkf.o diagnostics.o $(PLATFORM_OBJS) libeknav-ecef.so
 	$(LDXX) -o $@ $< diagnostics.o $(PLATFORM_OBJS) $(LDFLAGS) $(LIBS) -L. -leknav-ecef
 
+monte_carlo_pr_ins_qkf$(EXEXT): monte_carlo_pr_ins_qkf.o $(PLATFORM_OBJS) libeknav-ecef.so
+	$(LDXX) -o $@ $< $(PLATFORM_OBJS) $(LDFLAGS) $(LIBS) -L. -leknav-ecef
+	
 -include *.d win32/*.d posix/*.d
