@@ -117,7 +117,8 @@ namespace {
  * dst[dst_row, dst_col] += mult*src[src_row, src_col] + src[src_col, src_row]*mult.transpose()
  */
 void ssyr2k(Matrix<float, 12, 12>& dst, int dst_row, int dst_col,
-		const Matrix3f& mult, const Matrix<float, 12, 12>& src, int src_row, int src_col)
+		const Matrix3f& mult,
+		const Matrix<float, 12, 12>& src, int src_row, int src_col)
 {
 	dst.block<3, 3>(dst_row, dst_col) += mult * src.block<3, 3>(src_row, src_col)
 			+ src.block<3, 3>(src_col, src_row)*mult.transpose();
@@ -127,13 +128,27 @@ void ssyr2k(Matrix<float, 12, 12>& dst, int dst_row, int dst_col,
  * dst[dst, dst] += mult * src[src, src] * mult'
  * dst and src both symmetric
  */
+void sgemmm(Matrix<float, 12, 12>& dst, int dst_row, int dst_col,
+		const Matrix3f& mult,
+		const Matrix<float, 12, 12>& src,  int src_row, int src_col)
+{
+	dst.block<3, 3>(dst_row, dst_col) += mult * src.block<3, 3>(src_row, src_col) * mult.transpose();
+}
+
 void sgemmm(Matrix<float, 12, 12>& dst, int dst_diag,
 		const Matrix3f& mult,
-		const Matrix<float, 12, 12>& src, int src_diag)
+		const Matrix<float, 12, 12>& src,  int src_diag)
 {
-	dst.block<3, 3>(dst_diag, dst_diag).part<Eigen::SelfAdjoint>() +=
-			mult * src.block<3, 3>(src_diag, src_diag).part<Eigen::SelfAdjoint>() * mult.transpose();
+	sgemmm(dst, dst_diag, dst_diag, mult, src, src_diag, src_diag);
 }
+
+void sgemm(Matrix<float, 12, 12>& dst, int dst_row, int dst_col,
+		const Matrix3f& mult,
+		const Matrix<float, 12, 12>& src,  int src_row, int src_col)
+{
+	dst.block<3, 3>(dst_row, dst_col) += src.block<3, 3>(src_row, src_col) * mult.transpose();
+}
+
 } // !namespace anon
 
 void
@@ -157,8 +172,8 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	const Matrix<float, 4, 4> pt_cov = this->pt_cov;
 
 	// Some convenience blocks
-	const Matrix3f dtR = dt * attitude_conj.toRotationMatrix();
-	const Matrix3f dtQ = dt * accel_cov;
+	const Matrix3f dtR = -dt * attitude_conj.toRotationMatrix();
+	const Matrix3f dtQ = -dt * accel_cov;
 #if 1
 	// For space savings in flash, the matrix updates fall into the following basic forms:
 	// C += A*B*A'     // where B == B'
@@ -170,28 +185,30 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	// Compute the next covariance matrix using sparse blockwise operations.
 	// nop
 	// this->cov.block<3, 3>(0, 0) = this->cov.block<3, 3>(0, 0);
-	this->cov.block<3, 3>(0, 3) -= cov.block<3,3>(0, 0)*dtR.transpose();
-	this->cov.block<3, 3>(0, 6) -= cov.block<3, 3>(0, 3)*dtQ.transpose() + cov.block<3, 3>(0, 9)*dtR.transpose();
+	sgemm(this->cov, 0, 3, dtR, cov, 0, 0);
+	sgemm(this->cov, 0, 6, dtQ, cov, 0, 3);
+	sgemm(this->cov, 0, 6, dtR, cov, 0, 9);
 	// nop
 	// this->cov.block<3, 3>(0, 9) = this->cov.block<3, 3>(0, 9);
 
 	sgemmm(this->cov, 3, dtR, cov, 0);
-	ssyr2k(this->cov, 3, 3, -dtR, cov, 0, 3);
+	ssyr2k(this->cov, 3, 3, dtR, cov, 0, 3);
+	this->cov.block<3, 3>(3, 6) += dtR * cov.block<3, 3>(0, 6)
+			+ dtR*cov.block<3, 3>(0, 3)*dtQ.transpose();
+	sgemmm(this->cov, 3, 6, dtR, cov, 0, 9);
+	sgemm(this->cov, 3, 6, dtR, cov, 3, 9);
+	sgemm(this->cov, 3, 6, dtQ, cov, 3, 3);
+	this->cov.block<3, 3>(3, 9) += dtR*cov.block<3, 3>(0, 9);
 
-	this->cov.block<3, 3>(3, 6) += -dtR * cov.block<3, 3>(0, 6) - cov.block<3, 3>(3, 3)*dtQ.transpose()
-			+ dtR*cov.block<3, 3>(0, 3)*dtQ.transpose() - cov.block<3, 3>(3, 9)*dtR.transpose()
-			+ dtR*cov.block<3, 3>(0, 9)*dtR.transpose();
-	this->cov.block<3, 3>(3, 9) -= dtR*cov.block<3, 3>(0, 9);
-
-	ssyr2k(this->cov, 6, 6, -dtQ, cov, 3, 6);
-	ssyr2k(this->cov, 6, 6, -dtR, cov, 9, 6);
+	ssyr2k(this->cov, 6, 6, dtQ, cov, 3, 6);
+	ssyr2k(this->cov, 6, 6, dtR, cov, 9, 6);
 	{
-		Matrix3f tmp = dtR * (cov.block<3, 3>(3, 9) * dtQ).transpose();
+		Matrix3f tmp = dtR * (dtQ * cov.block<3, 3>(3, 9)).transpose();
 		this->cov.block<3, 3>(6, 6).part<Eigen::SelfAdjoint>() += tmp + tmp.transpose();
 	}
 	sgemmm(this->cov, 6, dtQ, cov, 3);
 	sgemmm(this->cov, 6, dtR, cov, 9);
-	this->cov.block<3, 3>(6, 9) -= dtQ*cov.block<3, 3>(3, 9) + dtR*cov.block<3, 3>(9, 9);
+	this->cov.block<3, 3>(6, 9) += dtQ*cov.block<3, 3>(3, 9) + dtR*cov.block<3, 3>(9, 9);
 
 	// nop
 	// this->cov.block<3, 3>(9, 9) = this->cov.block<3, 3>(9, 9);
@@ -218,9 +235,9 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	     // gyro bias row
 	A << Matrix<float, 3, 3>::Identity(), Matrix<float, 3, 9>::Zero(),
 		 // Orientation row
-		-dtR, Matrix<float, 3, 3>::Identity(), Matrix<float, 3, 6>::Zero(),
+		dtR, Matrix<float, 3, 3>::Identity(), Matrix<float, 3, 6>::Zero(),
 		 // Velocity row
-		 Matrix<float, 3, 3>::Zero(), -dtQ, Matrix<float, 3, 3>::Identity(), -dtR,
+		 Matrix<float, 3, 3>::Zero(), dtQ, Matrix<float, 3, 3>::Identity(), dtR,
 		 // accel bias row
 		 Matrix<float, 3, 9>::Zero(), Matrix<float, 3, 3>::Identity();
 
