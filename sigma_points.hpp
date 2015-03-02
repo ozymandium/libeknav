@@ -28,6 +28,8 @@
 #include <Eigen/SVD>
 #include <Eigen/LU>
 #include <Eigen/StdVector>
+#include <Eigen/Eigenvalues>
+
 #include <cstdlib>
 #include <vector>
 
@@ -85,7 +87,7 @@ quaternion_avg_markley(const std::vector<Quaternion<FloatT> >& points)
 		sum += points[i].toRotationMatrix();
 	}
 
-	SVD<Matrix<FloatT, 3, 3> > svd(sum);
+	JacobiSVD<Matrix<FloatT, 3, 3> > svd(sum);
 
 	Matrix<FloatT, 3, 3> result = svd.matrixU()
 		* (Matrix<FloatT, 3, 1>() << 1, 1, svd.matrixU().determinant()*svd.matrixV().determinant()).finished().asDiagonal()
