@@ -1,0 +1,29 @@
+syntax:glob
+
+# Ignore compiler object files
+*.o
+# Ignore compiler-generated dependency files.
+*.d
+# Ignore compiler-generated stack usage files.
+*.su
+# Ignore compiler-generated assembly listing files
+*.lst
+
+# Ignore final output files for the compiler
+*.elf
+*.bin
+*.hex
+*.map
+*.dmp
+
+# Ignore VIM temporary files
+*.swp
+*.swo
+# Ignore ctags output file
+tags
+
+# Ignore Doxygen output
+doc/doxygen/html
+doc/doxygen/latex
+doc/doxygen/doxygen_sqlite3.db
+
