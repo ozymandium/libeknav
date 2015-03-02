@@ -23,6 +23,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <limits>
 
 using Eigen::Quaternion;
 
@@ -94,7 +95,7 @@ exp(Eigen::Matrix<FloatT, 3, 1> v)
 {
 	FloatT angle = v.norm();
     Quaternion<FloatT> ret;
-    if (angle <= std::sqrt(2*Eigen::machine_epsilon<FloatT>())) {
+    if (angle <= std::sqrt(2*std::numeric_limits<FloatT>::epsilon())) {
 		// cos(x) expands to 1 - x*x*0.5 + (higher order terms).  But since
 		// 1- sqrt(eps)^2 rounds to exactly 1 ...
         ret.w() = 1;
@@ -128,7 +129,7 @@ log(const Quaternion<FloatT>& q)
 	// Solved for x, this becomes the inequality:
 	// x**2 < 6*epsilon
 	// x < sqrt(6*epsilon)
-	if (mag <= std::sqrt(6.0*Eigen::machine_epsilon<FloatT>())) {
+	if (mag <= std::sqrt(6.0*std::numeric_limits<FloatT>::epsilon())) {
 		// Flush to 2*vec for very small angles.  This avoids division by zero.
         return q.vec()*2.0;
 	}
@@ -172,7 +173,7 @@ Quaternion<FloatT>
 incremental_normalized(const Quaternion<FloatT>& q)
 {
     FloatT norm2 = q.coeffs().squaredNorm();
-    if (std::abs(1.0 - norm2) < 2*Eigen::machine_epsilon<FloatT>()) {
+    if (std::abs(1.0 - norm2) < 2*std::numeric_limits<FloatT>::epsilon()) {
     	// Less than 2 ulps of norm error.
     	return q;
     }
