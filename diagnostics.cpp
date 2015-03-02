@@ -10,6 +10,8 @@
  *  link time.
  */
 
+#include <limits>
+
 #include "ins_qkf.hpp"
 #include "assertions.hpp"
 
@@ -53,8 +55,7 @@ double
 basic_ins_qkf::mahalanobis_distance(const state& q) const
 {
 	state_error_t delta = sigma_point_difference(avg_state, q);
-	state_error_t inv_delta;
-	cov.lu().solve(delta, &inv_delta);
+	state_error_t inv_delta = cov.lu().solve(delta);
 	return std::sqrt(delta.dot(inv_delta));
 }
 
@@ -92,6 +93,8 @@ basic_ins_qkf::invariants_met(void) const
 	// The whole thing breaks down if NaN or Inf starts popping up
 	return is_real() &&
 		// Incremental normalization is working
-		std::abs(1 - 1.0/avg_state.orientation.norm()) < std::sqrt(Eigen::machine_epsilon<double>());
+		std::abs(1 - 1.0/avg_state.orientation.norm()) < 
+			std::sqrt(std::numeric_limits<double>::epsilon());
 
 }
+
