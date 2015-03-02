@@ -1,10 +1,14 @@
 
-CPPFLAGS = -I./ -DEIGEN_DONT_ALIGN -DEIGEN_DONT_VECTORIZE 
+EIGENDIR = /usr/include/eigen3
+BOOSTDIR = /usr/include/boost
+LIBEKNAV_OPTIONS = -DRANK_ONE_UPDATES
+
+CPPFLAGS = -I./ -DEIGEN_DONT_ALIGN -DEIGEN_DONT_VECTORIZE $(LIBEKNAV_OPTIONS)
 OPTIMIZE = -Os -ffast-math -g -ffunction-sections -fdata-sections
-WARNINGS = -Wall -Wextra -std=gnu++0x
+WARNINGS = -Wall -Wextra -std=c++11
 CXXFLAGS = -pipe -fshow-column -fPIC $(OPTIMIZE) $(WARNINGS)
 LDFLAGS = -pg -g -L. -Wl,--no-undefined
-LIBS = -lboost_thread
+LIBS = -lboost_thread -lboost_system
 
 #ifneq ($(WINDIR),)
 # On windows
@@ -19,11 +23,11 @@ LIBS = -lboost_thread
 #else
 #assumed to be on Linux
 EXEEXT = 
-CXX = g++-4.4
-CC = gcc-4.4
+CXX = g++
+CC = gcc
 LD = $(CC)
 LDXX = $(CXX)
-CPPFLAGS += -I./posix -I/home/jonathan/src/eigen -I/home/jonathan/src/boost_1_43_0
+CPPFLAGS += -I./posix -I$(EIGENDIR) -I$(BOOSTDIR)
 TARGETDIR = posix
 #endif
 
