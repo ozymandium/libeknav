@@ -169,7 +169,6 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 
 	// Take a full copy of the covariance matrix
 	const Matrix<float, 12, 12> cov = this->cov;
-	const Matrix<float, 4, 4> pt_cov = this->pt_cov;
 
 	// Some convenience blocks
 	const Matrix3f dtR = -dt * attitude_conj.toRotationMatrix();
@@ -204,7 +203,7 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 	ssyr2k(this->cov, 6, 6, dtR, cov, 9, 6);
 	{
 		Matrix3f tmp = dtR * (dtQ * cov.block<3, 3>(3, 9)).transpose();
-		this->cov.block<3, 3>(6, 6).part<Eigen::SelfAdjoint>() += tmp + tmp.transpose();
+		this->cov.block<3, 3>(6, 6) += tmp + tmp.transpose();
 	}
 	sgemmm(this->cov, 6, dtQ, cov, 3);
 	sgemmm(this->cov, 6, dtR, cov, 9);
@@ -245,7 +244,7 @@ pseudorange_ins_qkf::predict_ecef(const Vector3f& gyro_meas,
 
 	this->cov.part<Eigen::SelfAdjoint>() = A * cov.part<Eigen::SelfAdjoint>() * A.transpose();
 #endif
-	this->pt_cov.block<3, 3>(0, 0).part<Eigen::SelfAdjoint>() += dt*dt*cov.block<3, 3>(6, 6);
+	this->pt_cov.block<3, 3>(0, 0) += dt*dt*cov.block<3, 3>(6, 6);
 
 	// Add Q-matrix state estimate noise blocks
 	this->cov.block<3, 3>(0, 0) += gyro_stability_noise.asDiagonal() * dt;
@@ -282,7 +281,7 @@ pseudorange_ins_qkf::obs_vector(const Vector3f& ref,
 	Vector3f v_residual = log<float>(Quaternionf().setFromTwoVectors(ref, obs_ref));
 
 	// H.transpose()
-    const float eps = std::sqrt(Eigen::machine_epsilon<float>()*1e3);
+    const float eps = std::sqrt(std::numeric_limits<float>::epsilon()*1e3);
 	Matrix<float, 3, 2> h_trans;
 #if 0
 	h_trans.col(0) = ref.cross(
@@ -298,7 +297,6 @@ pseudorange_ins_qkf::obs_vector(const Vector3f& ref,
 
 	assert(!hasNaN(h_trans));
 	assert(h_trans.isUnitary());
-	Vector2f innovation = h_trans.transpose() * v_residual;
 
 	// Running a rank-one update here is a strict win.
 	Matrix<float, 12, 1> update = Matrix<float, 12, 1>::Zero();
@@ -307,7 +305,7 @@ pseudorange_ins_qkf::obs_vector(const Vector3f& ref,
 		float obs_cov = (h_trans.col(i).transpose() * cov.block<3, 3>(3, 3) * h_trans.col(i))[0];
 		Matrix<float, 12, 1> gain = cov.block<12, 3>(0, 3) * h_trans.col(i) / (obs_error + obs_cov);
 		update += gain * h_trans.col(i).transpose() * v_residual;
-		cov.part<Eigen::SelfAdjoint>() -= gain * h_trans.col(i).transpose() * cov.block<3, 12>(3, 0);
+		cov -= gain * h_trans.col(i).transpose() * cov.block<3, 12>(3, 0);
 	}
 
 
@@ -328,13 +326,13 @@ pseudorange_ins_qkf::obs_gps_pseudorange(Matrix<float, 4, 1>& accum,
 {
 	// Direction of the observation, as well as the predicted value of the pseudorange
 	Vector3d directiond;
-	directiond = (avg_state.position + accum.start<3>().cast<double>()) - sat_pos;
+	directiond = (avg_state.position + accum.head<3>().cast<double>()) - sat_pos;
 	double prediction = directiond.norm();
 	directiond *= 1.0/prediction;
 	prediction += avg_state.clock_bias + accum(3);
 
 	Vector4f direction;
-	direction.start<3>() = directiond.cast<float>();
+	direction.head<3>() = directiond.cast<float>();
 	direction(3) = 1.0f;
 
 	float innovation_cov = direction.dot(pt_cov * direction);
@@ -499,11 +497,12 @@ pseudorange_ins_qkf::mahalanobis_distance(const state& q) const
 {
 	state_error_t delta = sigma_point_difference(avg_state, q);
 
-	Matrix<float, 12, 1> main_err = delta.start<12>(), inv_delta;
-	Matrix<float, 4, 1> pos_err = delta.end<4>(), inv_delta_end;
+	Matrix<float, 12, 1> main_err = delta.head<12>();
+	Matrix<float, 4, 1> pos_err = delta.tail<4>();
 
-	cov.lu().solve(delta.start<12>(), &inv_delta);
-	pt_cov.lu().solve(delta.end<4>(), &inv_delta_end);
+	Matrix<float, 12, 1> inv_delta = cov.lu().solve(delta.head<12>());
+	Matrix<float, 4, 1> inv_delta_end = pt_cov.lu().solve(delta.tail<4>());
+
 	return std::sqrt(main_err.dot(inv_delta) + pos_err.dot(inv_delta_end));
 }
 
@@ -540,7 +539,8 @@ pseudorange_ins_qkf::invariants_met(void) const
 	// The whole thing breaks down if NaN or Inf starts popping up
 	return is_real() &&
 		// Incremental normalization is working
-		std::abs(1 - 1.0/avg_state.orientation.norm()) < std::sqrt(Eigen::machine_epsilon<float>());
+		std::abs(1 - 1.0/avg_state.orientation.norm()) < 
+			std::sqrt(std::numeric_limits<float>::epsilon());
 }
 
 bool

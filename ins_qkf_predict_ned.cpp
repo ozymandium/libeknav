@@ -46,17 +46,17 @@ basic_ins_qkf::predict_ned(const Vector3d& gyro_meas,
 	cov.block<3, 3>(0, 3) -= pcov.block<3,3>(0, 0)*dtR.transpose();
 	cov.block<3, 3>(0, 6) += dt * pcov.block<3, 3>(0, 9);
 	cov.block<3, 3>(0, 9) -= pcov.block<3, 3>(0, 3) * dtQ.transpose();
-	cov.block<3, 3>(3, 3).part<Eigen::SelfAdjoint>() += dtR*pcov.block<3, 3>(0, 0)*dtR.transpose()
+	cov.block<3, 3>(3, 3) += dtR*pcov.block<3, 3>(0, 0)*dtR.transpose()
 			- dtR*pcov.block<3, 3>(0, 3) - pcov.block<3, 3>(3, 0)*dtR.transpose();
 	cov.block<3, 3>(3, 6) += -dtR * (pcov.block<3, 3>(0, 6) + dt*pcov.block<3, 3>(0, 9))
 			+ dt*pcov.block<3, 3>(3, 9);
 	cov.block<3, 3>(3, 9) += -dtR*( -pcov.block<3, 3>(0, 3)*dtQ.transpose() + pcov.block<3, 3>(0, 9))
 			- pcov.block<3, 3>(3, 3)*dtQ.transpose();
-	cov.block<3, 3>(6, 6).part<Eigen::SelfAdjoint>() += dt*pcov.block<3, 3>(6, 9) + dt*dt*pcov.block<3, 3>(9, 9)
+	cov.block<3, 3>(6, 6) += dt*pcov.block<3, 3>(6, 9) + dt*dt*pcov.block<3, 3>(9, 9)
 			+ dt*pcov.block<3, 3>(9, 6);
 	cov.block<3, 3>(6, 9) += -pcov.block<3, 3>(6, 3)*dtQ.transpose() + dt*pcov.block<3, 3>(9, 9)
 			- dt*pcov.block<3, 3>(9, 3)*dtQ.transpose();
-	cov.block<3, 3>(9, 9).part<Eigen::SelfAdjoint>() += dtQ*pcov.block<3, 3>(3, 3)*dtQ.transpose()
+	cov.block<3, 3>(9, 9) += dtQ*pcov.block<3, 3>(3, 3)*dtQ.transpose()
 			- dtQ*pcov.block<3, 3>(3, 9) - pcov.block<3, 3>(9, 3)*dtQ.transpose();
 
 	// Update symmetric cross-covariance terms
@@ -98,7 +98,7 @@ basic_ins_qkf::predict_ned(const Vector3d& gyro_meas,
 void
 basic_ins_qkf::obs_gps_vtg_report(const Vector2d vel, const double v_error)
 {
-	Vector2d residual = vel - avg_state.velocity.start<2>();
+	Vector2d residual = vel - avg_state.velocity.head<2>();
 #if 0
 	// Compute using a single block update
 	Matrix<double, 2, 2> innovation_cov = cov.block<2, 2>(9, 9)
@@ -117,7 +117,7 @@ basic_ins_qkf::obs_gps_vtg_report(const Vector2d vel, const double v_error)
 		double innovation_cov_inv = 1.0/(cov(9+i, 9+i) + v_error);
 		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 9+i) / innovation_cov_inv;
 		update += gain * (residual[i] - update[9+i]);
-		cov.part<Eigen::SelfAdjoint>() -= gain * cov.block<1, 12>(9+i, 0);
+		cov -= gain * cov.block<1, 12>(9+i, 0);
 	}
 #endif
 

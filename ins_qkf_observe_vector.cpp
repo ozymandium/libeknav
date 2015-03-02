@@ -28,13 +28,14 @@
 #endif
 
 using namespace Eigen;
-#define RANK_ONE_UPDATES
 
 void
 basic_ins_qkf::obs_gyro_bias(const Vector3d& bias, const Vector3d& bias_error)
 {
-	Matrix<double, 12, 3> kalman_gain = cov.block<12, 3>(0, 0) 
-			* (cov.block<3, 3>(0, 0) + bias_error.asDiagonal()).inverse();
+	Matrix<double, 3, 3> s = cov.block<3, 3>(0, 0);
+	s.diagonal() += bias_error;
+
+	Matrix<double, 12, 3> kalman_gain = cov.block<12, 3>(0, 0) * s.inverse();
 	cov -= kalman_gain * cov.block<3, 12>(0, 0);
 	Vector3d innovation = bias - avg_state.gyro_bias;
 
@@ -65,7 +66,6 @@ basic_ins_qkf::obs_vector(const Vector3d& ref,
 	h_trans.col(1) = -ref.cross(h_trans.col(0));
 	assert(!hasNaN(h_trans));
 	assert(h_trans.isUnitary());
-	Vector2d innovation = h_trans.transpose() * v_residual;
 
 #ifdef RANK_ONE_UPDATES
 	// Running a rank-one update here is a strict win.
@@ -75,14 +75,17 @@ basic_ins_qkf::obs_vector(const Vector3d& ref,
 		double obs_cov = (h_trans.col(i).transpose() * cov.block<3, 3>(3, 3) * h_trans.col(i))[0];
 		Matrix<double, 12, 1> gain = cov.block<12, 3>(0, 3) * h_trans.col(i) / (obs_error + obs_cov);
 		update += gain * h_trans.col(i).transpose() * v_residual;
-		cov.part<Eigen::SelfAdjoint>() -= gain * h_trans.col(i).transpose() * cov.block<3, 12>(3, 0);
+		// TODO: Get Eigen to treat cov as self-adjoint
+		cov -= gain * h_trans.col(i).transpose() * cov.block<3, 12>(3, 0);
 	}
 #else
 	// block-wise form.  This is much less efficient.
+	Vector2d innovation = h_trans.transpose() * v_residual;
 	Matrix<double, 12, 2> kalman_gain = cov.block<12, 3>(0, 3) * h_trans
 			* (h_trans.transpose() * cov.block<3, 3>(3, 3) * h_trans 
 				+ (Vector2d() << error, error).finished().asDiagonal()).inverse();
-	cov.part<Eigen::SelfAdjoint>() -= kalman_gain * h_trans.transpose() * cov.block<3, 12>(3, 0);
+	// TODO: Get Eigen to treat cov as self-adjoint
+	cov -= kalman_gain * h_trans.transpose() * cov.block<3, 12>(3, 0);
 	Matrix<double, 12, 1> update = (kalman_gain * innovation);
 #endif
 
@@ -100,3 +103,4 @@ basic_ins_qkf::obs_vector(const Vector3d& ref,
 #endif
 
 }
+

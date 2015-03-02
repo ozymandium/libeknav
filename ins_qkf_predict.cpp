@@ -31,12 +31,6 @@ using namespace Eigen;
 
 namespace {
 
-Matrix<double, 3, 3>
-axis_scale(const Vector3d& axis, double scale)
-{
-	return (scale - 1) * axis * axis.transpose() + Matrix3d::Identity();
-}
-
 void
 linear_predict(basic_ins_qkf& _this,
 		const Vector3d& gyro_meas,
@@ -89,17 +83,17 @@ linear_predict(basic_ins_qkf& _this,
 	_this.cov.block<3, 3>(0, 3) -= cov.block<3,3>(0, 0)*dtR.transpose();
 	_this.cov.block<3, 3>(0, 6) += dt * cov.block<3, 3>(0, 9);
 	_this.cov.block<3, 3>(0, 9) -= cov.block<3, 3>(0, 3) * dtQ.transpose();
-	_this.cov.block<3, 3>(3, 3).part<Eigen::SelfAdjoint>() += dtR*cov.block<3, 3>(0, 0)*dtR.transpose()
+	_this.cov.block<3, 3>(3, 3) += dtR*cov.block<3, 3>(0, 0)*dtR.transpose()
 			- dtR*cov.block<3, 3>(0, 3) - cov.block<3, 3>(3, 0)*dtR.transpose();
 	_this.cov.block<3, 3>(3, 6) += -dtR * (cov.block<3, 3>(0, 6) + dt*cov.block<3, 3>(0, 9))
 			+ dt*cov.block<3, 3>(3, 9);
 	_this.cov.block<3, 3>(3, 9) += -dtR*( -cov.block<3, 3>(0, 3)*dtQ.transpose() + cov.block<3, 3>(0, 9))
 			- cov.block<3, 3>(3, 3)*dtQ.transpose();
-	_this.cov.block<3, 3>(6, 6).part<Eigen::SelfAdjoint>() += dt*cov.block<3, 3>(6, 9) + dt*dt*cov.block<3, 3>(9, 9)
+	_this.cov.block<3, 3>(6, 6) += dt*cov.block<3, 3>(6, 9) + dt*dt*cov.block<3, 3>(9, 9)
 			+ dt*cov.block<3, 3>(9, 6);
 	_this.cov.block<3, 3>(6, 9) += -cov.block<3, 3>(6, 3)*dtQ.transpose() + dt*cov.block<3, 3>(9, 9)
 			- dt*cov.block<3, 3>(9, 3)*dtQ.transpose();
-	_this.cov.block<3, 3>(9, 9).part<Eigen::SelfAdjoint>() += dtQ*cov.block<3, 3>(3, 3)*dtQ.transpose()
+	_this.cov.block<3, 3>(9, 9) += dtQ*cov.block<3, 3>(3, 3)*dtQ.transpose()
 			- dtQ*cov.block<3, 3>(3, 9) - cov.block<3, 3>(9, 3)*dtQ.transpose();
 
 	_this.cov.block<3, 3>(3, 0) = _this.cov.block<3, 3>(0, 3).transpose();

@@ -24,7 +24,6 @@
 #include "assertions.hpp"
 #include "timer.hpp"
 
-#define RANK_ONE_UPDATES
 
 #ifndef RANK_ONE_UPDATES
 #include <Eigen/LU>
@@ -43,7 +42,8 @@ basic_ins_qkf::obs_gps_p_report(const Vector3d& pos, const Vector3d& p_error)
 		double innovation_cov_inv = 1.0/(cov(6+i, 6+i) + p_error[i]);
 		Matrix<double, 12, 1> gain = cov.block<12, 1>(0, 6+i) * innovation_cov_inv;
 		update += gain * (residual[i] - update[6+i]);
-		cov.part<Eigen::SelfAdjoint>() -= gain * cov.block<1, 12>(6+i, 0);
+		// TODO: Optimize for the self-adjoint case here
+		cov -= gain * cov.block<1, 12>(6+i, 0);
 	}
 
 #else
@@ -53,8 +53,10 @@ basic_ins_qkf::obs_gps_p_report(const Vector3d& pos, const Vector3d& p_error)
 	Matrix<double, 12, 3> kalman_gain = cov.block<12, 3>(0, 6)
 		* innovation_cov.part<Eigen::SelfAdjoint>().inverse();
 	Matrix<double, 12, 1> update = kalman_gain * residual;
-	cov.part<Eigen::SelfAdjoint>() -= kalman_gain * cov.block<3, 12>(6, 0);
+	// TODO: Optimize for the self-adjoint case here
+	cov -= kalman_gain * cov.block<3, 12>(6, 0);
 #endif
 	avg_state.apply_kalman_vec_update(update);
 	assert(invariants_met());
 }
+
