@@ -397,8 +397,10 @@ test_run::perform_test(int n_iterations,
 			output << "Sampled angular error\n";
 		}
 		if (i != 0 && (i % gps_interval) == 0) {
-			double main_err = fabs(sample_gps(tester));
 #if 0
+			// Choose which INS to proceed with based on which one is farther
+			// off.
+			double main_err = fabs(sample_gps(tester));
 			// tester.limit_gyro_bias(::gyro_bias);
 			double alt_err = fabs(sample_gps(alternate));
 			if (!chosen && i == gps_interval*2) {
