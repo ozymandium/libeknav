@@ -1,5 +1,7 @@
 syntax:glob
 
+build
+
 # Ignore compiler object files
 *.o
 # Ignore compiler-generated dependency files.
@@ -30,5 +32,3 @@ tags
 doc/doxygen/html
 doc/doxygen/latex
 doc/doxygen/doxygen_sqlite3.db
-
-
