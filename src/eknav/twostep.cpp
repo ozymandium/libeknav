@@ -1,5 +1,5 @@
-#include <calibration.hpp>
-#include <assertions.hpp>
+#include <eknav/calibration.hpp>
+#include <eknav/assertions.hpp>
 
 #include <Eigen/Cholesky>
 #include <Eigen/QR>
@@ -22,7 +22,7 @@
  */
 
 namespace {
-Vector3f center(const Vector3f samples[], 
+Vector3f center(const Vector3f samples[],
 				size_t n_samples)
 {
 	Vector3f summation(Vector3f::Zero());
@@ -34,7 +34,7 @@ Vector3f center(const Vector3f samples[],
 
 void inv_fisher_information_matrix(Matrix3f& fisherInv,
 		Matrix3f& fisher,
-		const Vector3f samples[], 
+		const Vector3f samples[],
 		size_t n_samples,
 		const float noise)
 {
@@ -42,7 +42,7 @@ void inv_fisher_information_matrix(Matrix3f& fisherInv,
 	for (size_t i = 0; i < n_samples; ++i) {
 		column_samples.col(i) = samples[i];
 	}
-	fisher = 4 / noise * 
+	fisher = 4 / noise *
 		column_samples * column_samples.transpose();
 	// Compute the inverse by taking advantage of the results symmetricness
 	fisher.ldlt().solve(Matrix3f::Identity(), &fisherInv);
@@ -57,26 +57,26 @@ void inv_fisher_information_matrix(Matrix3f& fisherInv,
 // @return the negative gradiant of the cost function with respect to the
 // current value of the estimate, b
 Vector3f
-neg_dJdb(const Vector3f samples[], 
-		const float mags[], 
+neg_dJdb(const Vector3f samples[],
+		const float mags[],
 		size_t n_samples,
-		const Vector3f& b, 
+		const Vector3f& b,
 		float mu,
 		float noise)
 {
 	Vector3f summation(Vector3f::Zero());
 	float b_norm2 = b.squaredNorm();
-	
+
 	for (size_t i = 0; i < n_samples; ++i) {
 		summation += (mags[i] - 2*samples[i].dot(b) + b_norm2 - mu)
 			*2* (samples[i] - b);
 	}
-	
+
 	return (1.0 / noise)*summation;
 }
 } // !namespace (anon)
 
-Vector3f twostep_bias_only(const Vector3f samples[], 
+Vector3f twostep_bias_only(const Vector3f samples[],
 				size_t n_samples,
 				const Vector3f& referenceField,
 				const float noise)
@@ -109,7 +109,7 @@ Vector3f twostep_bias_only(const Vector3f samples[],
 		sampleDeltaMagCentered[i] = sampleDeltaMag[i] - sampleDeltaMagCenter;
 	}
 
-	// From eq 12a	
+	// From eq 12a
 	Vector3f estimate( Vector3f::Zero());
 	for (size_t i = 0; i < n_samples; ++i) {
 		estimate += sampleDeltaMagCentered[i] * centeredSamples[i];
@@ -120,7 +120,7 @@ Vector3f twostep_bias_only(const Vector3f samples[],
 	// eq 14a and 14b
 	float mu = -3*noise;
 	for (int i = 0; i < 6; ++i) {
-		Vector3f neg_gradiant = neg_dJdb(samples, sampleDeltaMag, n_samples, 
+		Vector3f neg_gradiant = neg_dJdb(samples, sampleDeltaMag, n_samples,
 				estimate, mu, noise);
 		Matrix3f scale = P_bb_inv + 4/noise*(avg - estimate)*(avg - estimate).transpose();
 		Vector3f neg_increment;
@@ -135,7 +135,7 @@ namespace {
 // Private utility functions for the version of TWOSTEP that computes bias and
 // scale factor vectors alone.
 
-/** Compute the gradiant of the norm of b with respect to the estimate vector.  
+/** Compute the gradiant of the norm of b with respect to the estimate vector.
  */
 Matrix<double, 6, 1>
 dnormb_dtheta(const Matrix<double, 6, 1>& theta)
@@ -153,9 +153,9 @@ dnormb_dtheta(const Matrix<double, 6, 1>& theta)
  * estimate.
  */
 Matrix<double, 6, 1>
-dJdb(const Matrix<double, 6, 1>& centerL, 
+dJdb(const Matrix<double, 6, 1>& centerL,
 		double centerMag,
-		const Matrix<double, 6, 1>& theta, 
+		const Matrix<double, 6, 1>& theta,
 		const Matrix<double, 6, 1>& dbdtheta,
 		double mu,
 		double noise)
@@ -179,7 +179,7 @@ dJdb(const Matrix<double, 6, 1>& centerL,
 Matrix<double, 1, 6>
 theta_to_sane(const Matrix<double, 6, 1>& theta)
 {
-	return (Matrix<double, 6, 1>() << 
+	return (Matrix<double, 6, 1>() <<
 		theta.coeff(0) / sqrt(1 + theta.coeff(3)),
 		theta.coeff(1) / sqrt(1 + theta.coeff(4)),
 		theta.coeff(2) / sqrt(1 + theta.coeff(5)),
@@ -211,13 +211,13 @@ theta_to_sane(const Matrix<double, 6, 1>& theta)
  * @param scale[out] The computed scale factor, in the sensor frame
  * @param samples[in] An array of measurement samples.
  * @param n_samples The number of samples in the array.
- * @param referenceField The magnetic field vector at this location. 
+ * @param referenceField The magnetic field vector at this location.
  * @param noise The one-sigma squared standard deviation of the observed noise
  * in the sensor.
  */
-void twostep_bias_scale(Vector3f& bias, 
-		Vector3f& scale, 
-		const Vector3f samples[], 
+void twostep_bias_scale(Vector3f& bias,
+		Vector3f& scale,
+		const Vector3f samples[],
 		const size_t n_samples,
 		const Vector3f& referenceField,
 		const float noise)
@@ -235,7 +235,7 @@ void twostep_bias_scale(Vector3f& bias,
 	double refSquaredNorm = referenceField.squaredNorm();
 
 	for (size_t i = 0; i < n_samples; ++i) {
-		fullSamples.row(i) << 2*samples[i].transpose().cast<double>(), 
+		fullSamples.row(i) << 2*samples[i].transpose().cast<double>(),
 			-(samples[i][0]*samples[i][0]),
 			-(samples[i][1]*samples[i][1]),
 			-(samples[i][2]*samples[i][2]);
@@ -247,7 +247,7 @@ void twostep_bias_scale(Vector3f& bias,
 	sampleDeltaMagCenter /= n_samples;
 	centerSample /= n_samples;
 
-	// True for all k.  
+	// True for all k.
 	// double mu = -3*noise;
 	// The center value of mu, \bar{mu}
 	// double centerMu = mu;
@@ -311,7 +311,7 @@ void twostep_bias_scale(Vector3f& bias,
 		// eq 40
 		Matrix<double, 1, 6> db_dtheta = dnormb_dtheta(estimate);
 
-		Matrix<double, 6, 1> dJ_dtheta = dJdb(centerSample, 
+		Matrix<double, 6, 1> dJ_dtheta = dJdb(centerSample,
 			sampleDeltaMagCenter,
 			estimate,
 			db_dtheta,
@@ -321,7 +321,7 @@ void twostep_bias_scale(Vector3f& bias,
 
 		// Eq 39 (with double-negation on term inside parens)
 		db_dtheta = centerSample - db_dtheta;
-	 	Matrix<double, 6, 6> scale = P_theta_theta_inv + 
+	 	Matrix<double, 6, 6> scale = P_theta_theta_inv +
 			(double(n_samples)/noise)*db_dtheta.transpose() * db_dtheta;
 
 		// eq 14b, mutatis mutandis (grumble, grumble)
@@ -329,7 +329,7 @@ void twostep_bias_scale(Vector3f& bias,
 		scale.ldlt().solve(dJ_dtheta, &increment);
 		estimate -= increment;
 	}
-	
+
 	// Transform the estimated parameters from [c | e] back into [b | d].
 	for (size_t i = 0; i < 3; ++i) {
 		scale.coeffRef(i) = -1 + sqrt(1 + estimate.coeff(3+i));
@@ -338,18 +338,18 @@ void twostep_bias_scale(Vector3f& bias,
 }
 
 namespace {
-// Private functions specific to the scale factor and orthogonal calibration 
+// Private functions specific to the scale factor and orthogonal calibration
 // version of TWOSTEP
 
-/** 
+/**
  * Reconstruct the symmetric E matrix from the last 6 elements of the estimate
  * vector
  */
-Matrix3d 
+Matrix3d
 E_theta(const Matrix<double, 9, 1>& theta)
 {
 	// By equation 49b
-	return (Matrix3d() << 
+	return (Matrix3d() <<
 			theta.coeff(3), theta.coeff(6), theta.coeff(7),
 			theta.coeff(6), theta.coeff(4), theta.coeff(8),
 			theta.coeff(7), theta.coeff(8), theta.coeff(5)).finished();
@@ -388,9 +388,9 @@ dnormb_dtheta(const Matrix<double, 9, 1>& theta)
 // @return the gradiant of the cost function with respect to the
 // current value of the estimate, theta'
 Matrix<double, 9, 1>
-dJ_dtheta(const Matrix<double, 9, 1>& centerL, 
+dJ_dtheta(const Matrix<double, 9, 1>& centerL,
 		double centerMag,
-		const Matrix<double, 9, 1>& theta, 
+		const Matrix<double, 9, 1>& theta,
 		const Matrix<double, 9, 1>& dbdtheta,
 		double mu,
 		double noise)
@@ -424,7 +424,7 @@ dJ_dtheta(const Matrix<double, 9, 1>& centerL,
  *       \epsilon_k is the noise at the kth sample
  *
  * After computing the scale factor and bias matricies, the optimal estimate is
- * given by 
+ * given by
  * \tilde{B}_k = (I_{3x3} + D)B_k - b
  *
  * This implementation makes the assumption that \epsilon is a constant white,
@@ -435,13 +435,13 @@ dJ_dtheta(const Matrix<double, 9, 1>& centerL,
  * @param scale[out] The computed scale factor matrix, in the sensor frame.
  * @param samples[in] An array of measurement samples.
  * @param n_samples The number of samples in the array.
- * @param referenceField The magnetic field vector at this location. 
+ * @param referenceField The magnetic field vector at this location.
  * @param noise The one-sigma squared standard deviation of the observed noise
  * in the sensor.
  */
-void twostep_bias_scale(Vector3f& bias, 
-		Matrix3f& scale, 
-		const Vector3f samples[], 
+void twostep_bias_scale(Vector3f& bias,
+		Matrix3f& scale,
+		const Vector3f samples[],
 		const size_t n_samples,
 		const Vector3f& referenceField,
 		const float noise)
@@ -459,7 +459,7 @@ void twostep_bias_scale(Vector3f& bias,
 	double refSquaredNorm = referenceField.squaredNorm();
 
 	for (size_t i = 0; i < n_samples; ++i) {
-		fullSamples.row(i) << 2*samples[i].transpose().cast<double>(), 
+		fullSamples.row(i) << 2*samples[i].transpose().cast<double>(),
 			-(samples[i][0]*samples[i][0]),
 			-(samples[i][1]*samples[i][1]),
 			-(samples[i][2]*samples[i][2]),
@@ -495,7 +495,7 @@ void twostep_bias_scale(Vector3f& bias,
 #ifdef PRINTF_DEBUGGING
 	SelfAdjointEigenSolver<Matrix<double, 9, 9> > eig(P_theta_theta_inv);
 	std::cout << "P_theta_theta_inverse: \n" << P_theta_theta_inv << "\n\n";
-	std::cout << "P_\\tt^-1 eigenvalues: " << eig.eigenvalues().transpose() 
+	std::cout << "P_\\tt^-1 eigenvalues: " << eig.eigenvalues().transpose()
 		<< "\n";
 	std::cout << "P_\\tt^-1 eigenvectors:\n" << eig.eigenvectors() << "\n";
 #endif
@@ -527,7 +527,7 @@ void twostep_bias_scale(Vector3f& bias,
 		Vector3d W; W << -1 + sqrt(1 + S.coeff(0)),
 				 -1 + sqrt(1 + S.coeff(1)),
 				 -1 + sqrt(1 + S.coeff(2));
-		scale = (eig_E.eigenvectors() * W.asDiagonal() * 
+		scale = (eig_E.eigenvectors() * W.asDiagonal() *
 				eig_E.eigenvectors().transpose()) .cast<float>();
 
 		(Matrix3f::Identity() + scale).ldlt().solve(
@@ -535,10 +535,10 @@ void twostep_bias_scale(Vector3f& bias,
 		std::cout << "\n\nestimated bias: " << bias.transpose()
 			<< "\nestimated scale:\n" << scale;
 #endif
-		
+
 		Matrix<double, 1, 9> db_dtheta = dnormb_dtheta(estimate);
 
-		Matrix<double, 9, 1> dJ_dtheta = ::dJ_dtheta(centerSample, 
+		Matrix<double, 9, 1> dJ_dtheta = ::dJ_dtheta(centerSample,
 			sampleDeltaMagCenter,
 			estimate,
 			db_dtheta,
@@ -547,7 +547,7 @@ void twostep_bias_scale(Vector3f& bias,
 
 		// Eq 59, with reused storage on db_dtheta
 		db_dtheta = centerSample - db_dtheta;
-	 	Matrix<double, 9, 9> scale = P_theta_theta_inv + 
+	 	Matrix<double, 9, 9> scale = P_theta_theta_inv +
 			(double(n_samples)/noise)*db_dtheta.transpose() * db_dtheta;
 
 		// eq 14b, mutatis mutandis (grumble, grumble)
@@ -557,9 +557,9 @@ void twostep_bias_scale(Vector3f& bias,
 		eta = increment.dot(scale * increment);
 		//std::cout << "eta: " << eta << "\n";
 	}
-	std::cout << "terminated at eta = " << eta 
+	std::cout << "terminated at eta = " << eta
 		<< " after " << count << " iterations\n";
-	
+
 	// Transform the estimated parameters from [c | E] back into [b | D].
 	// See eq 63-65
 	SelfAdjointEigenSolver<Matrix3d> eig_E(E_theta(estimate));
@@ -567,10 +567,9 @@ void twostep_bias_scale(Vector3f& bias,
 	Vector3d W; W << -1 + sqrt(1 + S.coeff(0)),
 			 -1 + sqrt(1 + S.coeff(1)),
 			 -1 + sqrt(1 + S.coeff(2));
-	scale = (eig_E.eigenvectors() * W.asDiagonal() * 
+	scale = (eig_E.eigenvectors() * W.asDiagonal() *
 			eig_E.eigenvectors().transpose()) .cast<float>();
 
 	(Matrix3f::Identity() + scale).ldlt().solve(
 			estimate.start<3>().cast<float>(), &bias);
 }
-

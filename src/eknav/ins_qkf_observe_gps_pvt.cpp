@@ -19,10 +19,10 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ins_qkf.hpp"
-#include "assertions.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/assertions.hpp"
 #include <Eigen/LU>
-#include "timer.hpp"
+#include "eknav/posix/timer.hpp"
 
 #ifdef TIME_OPS
 #include <iostream>
@@ -114,4 +114,3 @@ basic_ins_qkf::obs_gps_pv_report(const Vector3d& pos,
 	std::cout << "obs_gps_pvt time: " << time << "\n";
 #endif
 }
-

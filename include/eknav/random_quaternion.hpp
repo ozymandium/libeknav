@@ -20,8 +20,8 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "random_vector.hpp"
-#include "quaternions.hpp"
+#include "eknav/random_vector.hpp"
+#include "eknav/quaternions.hpp"
 
 template<typename FloatT>
 Quaternion<FloatT>

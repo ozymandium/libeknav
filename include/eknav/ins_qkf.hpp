@@ -20,9 +20,9 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sigma_points.hpp>
-#include <quaternions.hpp>
 #include <Eigen/StdVector>
+#include <eknav/sigma_points.hpp>
+#include <eknav/quaternions.hpp>
 
 using Eigen::Vector3f;
 using Eigen::Vector3d;
@@ -218,7 +218,7 @@ struct basic_ins_qkf
 	 * Directly observe the gyro sensor bias. In practice, we cannot do this. However,
 	 * the true bias is not a random walk. It tends to return towards zero when it is
 	 * farther away from zero (not temperature dependent). Therefore, we can
-	 * incorporate this extra knowledge through a periodic "observation" of zero 
+	 * incorporate this extra knowledge through a periodic "observation" of zero
 	 * bias with a large error.
 	 *
 	 * Use with extreme caution. It is almost certainly better to just clamp the

@@ -19,12 +19,12 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ins_qkf.hpp"
 #include <iostream>
 #include <iomanip>
-#include "random_vector.hpp"
 #include <boost/lexical_cast.hpp>
-#include "timer.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/random_vector.hpp"
+#include "eknav/posix/timer.hpp"
 
 Quaterniond
 initial_orientation(void)

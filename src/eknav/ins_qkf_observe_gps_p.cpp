@@ -20,9 +20,9 @@
  *
  */
 
-#include "ins_qkf.hpp"
-#include "assertions.hpp"
-#include "timer.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/assertions.hpp"
+#include "eknav/posix/timer.hpp"
 
 
 #ifndef RANK_ONE_UPDATES
@@ -59,4 +59,3 @@ basic_ins_qkf::obs_gps_p_report(const Vector3d& pos, const Vector3d& p_error)
 	avg_state.apply_kalman_vec_update(update);
 	assert(invariants_met());
 }
-

@@ -19,9 +19,9 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ins_qkf.hpp"
-#include "assertions.hpp"
-#include "timer.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/assertions.hpp"
+#include "eknav/posix/timer.hpp"
 
 #ifdef TIME_OPS
 # include <iostream>
@@ -142,4 +142,3 @@ basic_ins_qkf::predict(const Vector3d& gyro_meas,
 	std::cout << "unscented predict time: " << time << "\n";
 #endif
 }
-

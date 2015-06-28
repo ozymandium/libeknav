@@ -10,11 +10,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${eknav_CXX_FLAGS}")
 
 include_directories(
   include
-  src
-  include/posix
-  include/eknav
-  src/posix
-  src/eknav
+  # src
+  # include/posix
+  # include/eknav
+  # src/posix
+  # src/eknav
 )
 
 find_package(Boost REQUIRED COMPONENTS system thread)
@@ -58,8 +58,8 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 set(INS_QKF_ECEF_SRCS
   include/eknav/pr_ins_qkf.hpp
-  include/posix/timer.hpp
-  src/posix/timer.cpp
+  include/eknav/posix/timer.hpp
+  src/eknav/posix/timer.cpp
   src/eknav/ins_qkf_observe_gps_p.cpp
   src/eknav/ins_qkf_observe_vector.cpp
   src/eknav/ins_qkf_predict.cpp
@@ -76,8 +76,8 @@ target_link_libraries(eknav-ecef ${eknav_LINK_LIBS})
 
 add_executable(test_ins_qkf examples/test_ins_qkf.cpp
   src/eknav/ins_qkf_observe_gps_pvt.cpp
-  include/posix/random_seed.hpp
-  src/posix/random_seed.cpp
+  include/eknav/posix/random_seed.hpp
+  src/eknav/posix/random_seed.cpp
 )
 target_link_libraries(test_ins_qkf
   eknav-ecef
@@ -85,8 +85,8 @@ target_link_libraries(test_ins_qkf
 )
 
 add_executable(monte_carlo_pr_ins_qkf examples/monte_carlo_pr_ins_qkf.cpp
-  include/posix/random_seed.hpp
-  src/posix/random_seed.cpp
+  include/eknav/posix/random_seed.hpp
+  src/eknav/posix/random_seed.cpp
 )
 target_link_libraries(monte_carlo_pr_ins_qkf
   eknav-ecef

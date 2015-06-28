@@ -19,9 +19,9 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ins_qkf.hpp"
-#include "assertions.hpp"
-#include "timer.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/assertions.hpp"
+#include "eknav/posix/timer.hpp"
 
 #ifdef TIME_OPS
 #include <iostream>
@@ -82,7 +82,7 @@ basic_ins_qkf::obs_vector(const Vector3d& ref,
 	// block-wise form.  This is much less efficient.
 	Vector2d innovation = h_trans.transpose() * v_residual;
 	Matrix<double, 12, 2> kalman_gain = cov.block<12, 3>(0, 3) * h_trans
-			* (h_trans.transpose() * cov.block<3, 3>(3, 3) * h_trans 
+			* (h_trans.transpose() * cov.block<3, 3>(3, 3) * h_trans
 				+ (Vector2d() << error, error).finished().asDiagonal()).inverse();
 	// TODO: Get Eigen to treat cov as self-adjoint
 	cov -= kalman_gain * h_trans.transpose() * cov.block<3, 12>(3, 0);
@@ -103,4 +103,3 @@ basic_ins_qkf::obs_vector(const Vector3d& ref,
 #endif
 
 }
-

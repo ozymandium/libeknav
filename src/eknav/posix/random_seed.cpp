@@ -1,4 +1,4 @@
-#include "posix/random_seed.hpp"
+#include "eknav/posix/random_seed.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

@@ -20,9 +20,9 @@
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sigma_points.hpp>
-#include <quaternions.hpp>
 #include <Eigen/StdVector>
+#include <eknav/sigma_points.hpp>
+#include <eknav/quaternions.hpp>
 
 using Eigen::Vector3f;
 using Eigen::Vector3d;

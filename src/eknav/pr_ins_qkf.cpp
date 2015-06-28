@@ -19,8 +19,8 @@
  *
  */
 
-#include <pr_ins_qkf.hpp>
-#include <assertions.hpp>
+#include <eknav/pr_ins_qkf.hpp>
+#include <eknav/assertions.hpp>
 
 using namespace Eigen;
 
@@ -539,7 +539,7 @@ pseudorange_ins_qkf::invariants_met(void) const
 	// The whole thing breaks down if NaN or Inf starts popping up
 	return is_real() &&
 		// Incremental normalization is working
-		std::abs(1 - 1.0/avg_state.orientation.norm()) < 
+		std::abs(1 - 1.0/avg_state.orientation.norm()) <
 			std::sqrt(std::numeric_limits<float>::epsilon());
 }
 

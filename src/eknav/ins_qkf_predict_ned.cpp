@@ -14,9 +14,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with libeknav.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "ins_qkf.hpp"
-#include "assertions.hpp"
-#include "timer.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/assertions.hpp"
+#include "eknav/posix/timer.hpp"
 
 #ifdef TIME_OPS
 #include <iostream>
@@ -124,4 +124,3 @@ basic_ins_qkf::obs_gps_vtg_report(const Vector2d vel, const double v_error)
 	avg_state.apply_kalman_vec_update(update);
 	assert(invariants_met());
 }
-

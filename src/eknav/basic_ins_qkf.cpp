@@ -19,8 +19,8 @@
  *
  */
 
-#include "ins_qkf.hpp"
-#include "assertions.hpp"
+#include "eknav/ins_qkf.hpp"
+#include "eknav/assertions.hpp"
 
 using namespace Eigen;
 
@@ -59,5 +59,3 @@ basic_ins_qkf::state::apply_kalman_vec_update(const Matrix<double, 12, 1> update
 	velocity += update.segment<3>(9);
 	return posterior_update;
 }
-
-

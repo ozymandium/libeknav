@@ -5,9 +5,9 @@
  *      Author: Jonathan Brandmeyer
  */
 
-#include <pr_ins_qkf.hpp>
-#include <random_vector.hpp>
-#include <random_seed.hpp>
+#include <eknav/pr_ins_qkf.hpp>
+#include <eknav/random_vector.hpp>
+#include <eknav/posix/random_seed.hpp>
 
 #include <boost/random.hpp>
 #include <boost/lexical_cast.hpp>
@@ -347,10 +347,10 @@ test_run::sample_gps(pseudorange_ins_qkf& tester)
 }
 
 void
-test_run::perform_test(int n_iterations, 
-        int imu_interval, 
-        int angle_interval, 
-        int gps_interval, 
+test_run::perform_test(int n_iterations,
+        int imu_interval,
+        int angle_interval,
+        int gps_interval,
         std::ostream& output)
 {
 	pseudorange_ins_qkf tester;
@@ -492,7 +492,7 @@ run_some(const program_arguments& args)
 		else {
 			seed = top_sequence();
 		}
-		
+
 
 		std::ofstream output(args.output_dir + boost::lexical_cast<std::string>(seed) + ".csv");
 		test_run run(seed);
