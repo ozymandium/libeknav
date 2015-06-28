@@ -1,5 +1,7 @@
-project(jbrandmeyer_libeknav)
+project(eknav)
 cmake_minimum_required(VERSION 2.8)
+
+# Compiler options
 
 set(LIBEKNAV_OPTIONS "-DRANK_ONE_UPDATES")
 set(MORE_OPTIONS "-DEIGEN_DONT_ALIGN -DEIGEN_DONT_VECTORIZE ${LIBEKNAV_OPTIONS}")
@@ -8,14 +10,7 @@ set(WARNINGS "-Wall -Wextra -std=c++11")
 set(eknav_CXX_FLAGS "-pipe -fshow-column -fPIC ${OPTIMIZE} ${WARNINGS} ${MORE_OPTIONS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${eknav_CXX_FLAGS}")
 
-include_directories(
-  include
-  # src
-  # include/posix
-  # include/eknav
-  # src/posix
-  # src/eknav
-)
+include_directories(include)
 
 find_package(Boost REQUIRED COMPONENTS system thread)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -71,8 +66,12 @@ set(INS_QKF_ECEF_SRCS
 # add_library(eknav-ned ${INS_QKF_NED_SRCS})
 # target_link_libraries(eknav-ned ${eknav_LINK_LIBS})
 
-add_library(eknav-ecef ${INS_QKF_ECEF_SRCS})
-target_link_libraries(eknav-ecef ${eknav_LINK_LIBS})
+add_library(eknav SHARED ${INS_QKF_ECEF_SRCS})
+target_link_libraries(eknav ${eknav_LINK_LIBS})
+
+#
+# Example executables
+#
 
 add_executable(test_ins_qkf examples/test_ins_qkf.cpp
   src/eknav/ins_qkf_observe_gps_pvt.cpp
@@ -80,7 +79,7 @@ add_executable(test_ins_qkf examples/test_ins_qkf.cpp
   src/eknav/posix/random_seed.cpp
 )
 target_link_libraries(test_ins_qkf
-  eknav-ecef
+  eknav
   ${eknav_LINK_LIBS}
 )
 
@@ -89,6 +88,24 @@ add_executable(monte_carlo_pr_ins_qkf examples/monte_carlo_pr_ins_qkf.cpp
   src/eknav/posix/random_seed.cpp
 )
 target_link_libraries(monte_carlo_pr_ins_qkf
-  eknav-ecef
+  eknav
   ${eknav_LINK_LIBS}
+)
+
+#
+# Install
+#
+
+set(CMAKE_INSTALL_PREFIX /usr/local)
+install(
+  TARGETS eknav
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    # RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+install(DIRECTORY include/${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+)
+install(FILES Findeknav.cmake
+    DESTINATION ${CMAKE_ROOT}/Modules
 )
