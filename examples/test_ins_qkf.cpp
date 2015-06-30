@@ -107,21 +107,35 @@ main(int argc, char **argv)
 		// quaternion
 		if (i % 4 == 0) {
 			// INS observations at 250 Hz
-			tester.predict(gyros() + angular_velocity, d_orientation * orientation * accel(), 0.005);
+			tester.predict(
+				gyros() + angular_velocity,
+				d_orientation * orientation * accel(),
+				0.005
+			);
 		}
 
 		if (i % 50 == 0) {
 			// Angular observation at 20 Hz
 			// std::cout << "observed angle\n";
 			// print_orientation_decomp(tester); std::cout << "\n";
-			tester.obs_vector(Vector3d::UnitZ(), (d_orientation * orientation * obs_0()).normalized(), mag_error);
+			tester.obs_vector(
+				Vector3d::UnitZ(),
+				(d_orientation * orientation * obs_0()).normalized(),
+				mag_error
+			);
 			// print_orientation_decomp(tester); std::cout << "\n";
 			// tester.obs_vector(Vector3d::UnitY(), (d_orientation * orientation * obs_1()).normalized(), mag_error);
 		}
 		if (i % 100 == 0) {
 			// GPS observations at 4 Hz
 			// std::cout << "observed GPS\n";
-			tester.obs_gps_pv_report(gps_pos(), gps_dv(), Vector3d::Ones()*gps_pos_error, Vector3d::Ones()*gps_dv_error);
+			tester.obs_gps_pv_report(
+				gps_pos(),
+				gps_dv(),
+				Vector3d::Ones()*gps_pos_error,
+				Vector3d::Ones()*gps_dv_error
+			);
+
 		}
 	}
 	double obs_us = clock.stop() * 1e6;

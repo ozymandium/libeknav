@@ -133,6 +133,7 @@ struct basic_ins_qkf
 
 	/**
 	 * Initialize a new basic INS QFK
+	 * @param orientation_est !!!!!!!!!!!!!!! changed manually
 	 * @param pos_estimate Initial estimate of the position
 	 * @param pos_error one-sigma initial bounds for position error
 	 * @param bias_error one-sigma initial bounds for bias error in the gyros
@@ -141,7 +142,9 @@ struct basic_ins_qkf
 	 * @param gyro_stability_noise The diagonal matrix of gyro instability noise
 	 * @param accel_white_noise The diagonal matrix of accelerometer white noise
 	 */
-	basic_ins_qkf(const Vector3d& pos_estimate,
+	basic_ins_qkf(
+			// const Quaterniond orientation_est, // !!!!!!!!!!!!!!
+			const Vector3d& pos_estimate,
 			double pos_error,
 			double bias_error,
 			double v_error,
@@ -187,7 +190,8 @@ struct basic_ins_qkf
 	 * @param p_error The RMS position error, (m)^2
 	 * @param v_error The RMS velocity error, (m/s)^2
 	 */
-	void obs_gps_pv_report(const Vector3d& pos,
+	void obs_gps_pv_report(
+			const Vector3d& pos,
 			const Vector3d& vel,
 			const Vector3d& p_error,
 			const Vector3d v_error);

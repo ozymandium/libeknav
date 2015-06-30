@@ -51,11 +51,14 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 #   src/posix/timer.cpp
 # )
 
+# This library will contain both loosely- and closely-coupled versions of the
+# GPS/INS
 set(INS_QKF_ECEF_SRCS
   include/eknav/pr_ins_qkf.hpp
   include/eknav/posix/timer.hpp
   src/eknav/posix/timer.cpp
   src/eknav/ins_qkf_observe_gps_p.cpp
+  src/eknav/ins_qkf_observe_gps_pvt.cpp
   src/eknav/ins_qkf_observe_vector.cpp
   src/eknav/ins_qkf_predict.cpp
   src/eknav/basic_ins_qkf.cpp
@@ -96,7 +99,9 @@ target_link_libraries(monte_carlo_pr_ins_qkf
 # Install
 #
 
-set(CMAKE_INSTALL_PREFIX /usr/local)
+# set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# set(INSTALL_WTIH_RPATH TRUE)
+set(CMAKE_INSTALL_PREFIX /usr/local/)
 install(
   TARGETS eknav
     ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
